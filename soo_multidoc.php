@@ -368,9 +368,9 @@ class Soo_Multidoc_Node extends Soo_Obj {
 				$li = new Soo_Html_Li;
 				$url = $soo_multidoc['data'][$this->id]['url'];
 				$anchor = new Soo_Html_Anchor($url);
-				$anchor->set_contents($this->title);
-				$li->set_contents($anchor);
-				$out->set_contents($li);
+				$anchor->contents($this->title);
+				$li->contents($anchor);
+				$out->contents($li);
 				unset($anchor);
 				unset($li);
 				$include_self = false;
@@ -380,21 +380,21 @@ class Soo_Multidoc_Node extends Soo_Obj {
 				if ( is_array($child->children) ) {
 					if ( $child->id == $current_page ) {
 						$item = new Soo_Html_Span;
-						$item->set_class($active_class);
+						$item->class($active_class);
 					}
 					else {
 						$item = new Soo_Html_Anchor;
 						$url = $soo_multidoc['data'][$child->id]['url'];
-						$item->set_href($url);
+						$item->href($url);
 					}
-					$item->set_contents($child->title);
+					$item->contents($child->title);
 				}
 
 				$li = new Soo_Html_Li;
 				if ( isset($item) )
-					$li->set_contents($item);
-				$li->set_contents($child->toc($type, $current_page, $active_class, $include_self));
-				$out->set_contents($li);
+					$li->contents($item);
+				$li->contents($child->toc($type, $current_page, $active_class, $include_self));
+				$out->contents($li);
 				unset($item);
 				unset($li);
 			}
@@ -404,14 +404,14 @@ class Soo_Multidoc_Node extends Soo_Obj {
 			
 			if ( $this->id == $current_page ) {
 				$out = new Soo_Html_Span;
-				$out->set_class($active_class);
+				$out->class($active_class);
 			}
 			else {
 				$out = new Soo_Html_Anchor;
 				$url = $soo_multidoc['data'][$this->id]['url'];
-				$out->set_href($url);
+				$out->href($url);
 			}
-			$out->set_contents($this->title);
+			$out->contents($this->title);
 		}
 		return isset($out) ? $out : false;
 	}
@@ -507,32 +507,32 @@ function soo_multidoc_link( $atts, $thing = null ) {
 	
 	if ( $link_id == $thisid ) {
 		$tag = new Soo_Html_Span;
-		$tag->set_class($active_class);
+		$tag->class($active_class);
 	}
 	else {
 		$tag = new Soo_Html_Anchor;
-		$tag->set_href($url)
-			->set_rel($rel);
+		$tag->href($url)
+			->rel($rel);
 	}
 	
-	$tag->set_contents( $thing ? $thing : $rel );
+	$tag->contents( $thing ? $thing : $rel );
 		
 	if ( $wraptag ) {
 		$tag_class = 'soo_html_' . $wraptag;
 		if ( class_exists($tag_class) ) {
 			$wraptag = new $tag_class;
 			return $wraptag
-				->set_contents($tag)
-				->set_class($class)
-				->set_id($html_id)
+				->contents($tag)
+				->class($class)
+				->id($html_id)
 				->tag();
 		}
 	}
 	
 	else {
-		$tag->set_id($html_id);
+		$tag->id($html_id);
 		if ( $link_id != $thisid )
-			$tag->set_class($class);
+			$tag->class($class);
 		return $tag->tag();
 	}
 }
@@ -604,7 +604,7 @@ function soo_multidoc_pager( $atts ) {
 		else {
 			$url = $soo_multidoc['data'][$page_ids[$n - 1]]['url'];
 			$page = new Soo_Html_Anchor($url);
-			$objs[] = $page->set_contents($n)->set_class($class);
+			$objs[] = $page->contents($n)->class($class);
 		}			
 		$fill = $show_nums ? 
 			( $show_nums[0] > $n + 1 ? $placeholder : $break ) : '';
@@ -626,7 +626,7 @@ function soo_multidoc_pager( $atts ) {
 				$objs[$i] = new $break_obj($obj);
 		foreach ( $objs as $obj )
 			if ( $obj instanceof $break_obj )
-				$obj->set_class($breakclass);
+				$obj->class($breakclass);
 	}
 	
 	if ( $wraptag == 'table' )
@@ -638,20 +638,20 @@ function soo_multidoc_pager( $atts ) {
 			$wrap_obj = new $wrap_obj_class;
 	}
 	if ( isset($wrap_obj) ) {
-		$wrap_obj->set_class($wrapclass);
+		$wrap_obj->class($wrapclass);
 		foreach ( $objs as $obj )
-			$wrap_obj->set_contents($obj);
+			$wrap_obj->contents($obj);
 
 		if ( $wraptag == 'table' ) {
 			$tbody = new Soo_Html_Tbody;
-			$tbody->set_contents($wrap_obj);
+			$tbody->contents($wrap_obj);
 			$table = new Soo_Html_Table;
-			return $table->set_contents($tbody)
-				->set_id($html_id)->tag();
+			return $table->contents($tbody)
+				->id($html_id)->tag();
 		}
 		else
 			return $wrap_obj
-				->set_id_($html_id)->tag();
+				->id_($html_id)->tag();
 	}
 	else {
 		$out = array();
@@ -730,8 +730,8 @@ function soo_multidoc_toc( $atts ) {
 		$out = $collection->toc('ul', $thisid, $active_class, $add_start);
 
 	return $out
-		->set_class($class)
-		->set_id($html_id)
+		->class($class)
+		->id($html_id)
 		->tag();
 
 }	
@@ -822,14 +822,14 @@ function _soo_multidoc_init() {
 	
 	// _soo_multidoc_build_tree() gets everything but the Start node itself
 	$collection = new Soo_Multidoc_Node($start);
-	$collection->set_link_type('Start')
-		->set_title($data[$start]['Title'])
-		->set_children($tree);
+	$collection->link_type('Start')
+		->title($data[$start]['Title'])
+		->children($tree);
 		
 		
 	// go back and set 'next' values ///////.................................
 	$next_node = array_shift($tree);
-	$collection->set_next($next_node->get_id());
+	$collection->next($next_node->get_id());
 	unset($next_node);
 	$next = $collection->youngest();
 	$to_set = $collection->get_prev($next);
@@ -870,17 +870,17 @@ function _soo_multidoc_build_tree($start_id) {
 	
 		extract($data[$child]);
 		$node = new Soo_Multidoc_Node($child);
-		$node->set_link_type($link_type)
-			->set_title($Title)
-			->set_up($parent);	// this node's parent
-		$node->set_prev($_soo_multidoc_prev);
+		$node->link_type($link_type)
+			->title($Title)
+			->up($parent);	// this node's parent
+		$node->prev($_soo_multidoc_prev);
 		$_soo_multidoc_prev = $child;
 		
 		if ( isset($id_children[$child]) ) {
 			$result = _soo_multidoc_build_tree($child);
 			if ( ! is_array($result) )	// recursion limit warning
 				return $result;
-			$node->set_children($result);
+			$node->children($result);
 			$out[$child] = $node;
 		}
 		else 
@@ -1040,7 +1040,7 @@ function _soo_multidoc_data_init() {
 				$r['root'] = $id;
 			$r['parent'] = $id_parent[$id];
 			$r['link_type'] = $id_link_type[$id];
-			$r['url'] = _soo_multidoc_url($r);
+			$r['url'] = _soo_multidoc_url($r);	
 			$out[$id] = $r;
 		}
 	}
