@@ -17,199 +17,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-// $plugin['name'] = '';		// If unset, name extracted from file name.
 $plugin['version'] = '1.0.a.7';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/';
 $plugin['description'] = 'Textpattern plugin';
-
-// Plugin types:
-// 0 = regular plugin; loaded on the public web side only
-// 1 = admin plugin; loaded on both the public and admin side
-// 2 = library; loaded only when include_plugin() or require_plugin() is called
 $plugin['type'] = 1; 
 
-
 @include_once('zem_tpl.php');
-
-if (0) {
-?>
-<!-- CSS & HELP
-# --- BEGIN PLUGIN CSS ---
-<style type="text/css">
-div#sed_help pre {padding: 0.5em 1em; background: #eee; border: 1px dashed #ccc;}
-div#sed_help h1, div#sed_help h2, div#sed_help h3, div#sed_help h3 code {font-family: sans-serif; font-weight: bold;}
-div#sed_help h1, div#sed_help h2, div#sed_help h3 {margin-left: -1em;}
-div#sed_help h2, div#sed_help h3 {margin-top: 2em;}
-div#sed_help h1 {font-size: 2.4em;}
-div#sed_help h2 {font-size: 1.8em;}
-div#sed_help h3 {font-size: 1.4em;}
-div#sed_help h4 {font-size: 1.2em;}
-div#sed_help h5 {font-size: 1em;margin-left:1em;font-style:oblique;}
-div#sed_help li {list-style-type: disc;}
-div#sed_help li li {list-style-type: circle;}
-div#sed_help li li li {list-style-type: square;}
-div#sed_help li a code {font-weight: normal;}
-div#sed_help li code:first-child {background: #ddd;padding:0 .3em;margin-left:-.3em;}
-div#sed_help li li code:first-child {background:none;padding:0;margin-left:0;}
-div#sed_help dfn {font-weight:bold;font-style:oblique;}
-div#sed_help .required, div#sed_help .warning {color:red;}
-div#sed_help .default {color:green;}
-</style>
-# --- END PLUGIN CSS ---
-# --- BEGIN PLUGIN HELP ---
- <div id="sed_help">
-
-h1. soo_multidoc
-
-This is just a bare-bones tag reference. All of these tags require that you have set up the *Multidoc* system on your Textpattern website. A full "User Guide":http://ipsedixit.net/txp/24/multidoc is available at the "author's website":http://ipsedixit.net/.
-
-h2. Contents
-
-* "Tags":#tags
-** "soo_multidoc_link":#soo_multidoc_link
-** "soo_multidoc_pager":#soo_multidoc_pager
-** "soo_multidoc_page_number":#soo_multidoc_page_number
-** "soo_multidoc_toc":#soo_multidoc_toc
-** "soo_if_multidoc":#soo_if_multidoc
-* "Version history":#history
-
-h2(#tags). Tags
-
-h3(#soo_multidoc_link). soo_multidoc_link
-
-h4. Usage
-
-Generates an HTML anchor element, based on document relationship. Can be used as a single or container tag. Requires individual article context.
-
-pre. <txp:soo_multidoc_link rel="Prev" />
-<txp:soo_multidoc_link rel="Next">Continue reading ... </txp:soo_multidoc_link> 
-
-When used as a single tag, the @rel@ value is used for the link text.
-
-h4. Attributes
-
-* @rel="LinkType"@ The "link type":http://www.w3.org/TR/REC-html40/types.html#type-links describing the linked document's relationship to the current page
-* @add_title="boolean"@ Add the linked document's title to the link text
-* @class="HTML class"@ HTML class attribute value for the anchor tag
-* @active_class="HTML class"@ HTML class attribute value if @rel@ refers to the current page (tag will be a @span@ instead of @a@)
-* @html_id="HTML ID"@ HTML ID attribute value for the anchor tag
-* @wraptag="tag name"@ Tag name (no brackets) for element to wrap the anchor
-
-
-h3(#soo_multidoc_pager). soo_multidoc_pager
-
-h4. Usage
-
-Generates a numbered page navigation widget. Requires individual article context.
-
-pre. <txp:soo_multidoc_pager />
-
-h4. Attributes
-
-* @limit="integer"@ Number of pages to show before and after the current page before inserting the @placeholder@ text. Default is @0@, no limit (show all).
-* @placeholder="text"@ Text to show for missing pages (see @limit@). Default is @&hellip;@ (horizontal ellipsis).
-* @class="HTML class"@ HTML class attribute value for the anchor tag
-* @active_class="HTML class"@ HTML class attribute value for the @span@ tag for the current page
-* @html_id="HTML ID"@ HTML ID attribute value for the anchor tag
-* @wraptag="tag name"@ Tag name (no brackets) for element to wrap the anchor
-* @break="mixed"@ Tag name (no brackets) or text to add between items
-
-h3(#soo_multidoc_page_number). soo_multidoc_page_number
-
-h4. Usage
-
-Outputs current page number and total number of pages. Requires individual article context.
-
-pre. <txp:soo_multidoc_page_number />
-
-h4. Attributes
-
-* @class="HTML class"@ HTML class attribute value for the output tag
-* @html_id="HTML ID"@ HTML ID attribute value for the output tag
-* @wraptag="tag name"@ Tag name (no brackets) for output tag. Default is "span"
-* @format="format string"@ Default is "Page {page} of {total}". The tag will output this string, after any occurences of "{page}" have been replaced with the current page number; likewise for "{total}" and the total number of pages.
-
-h3(#soo_multidoc_toc). soo_multidoc_toc
-
-h4. Usage
-
-Generates a structured table of contents. Requires individual article context.
-
-pre. <txp:soo_multidoc_toc />
-
-h4. Attributes
-
-* @class="HTML class"@ HTML class attribute value for the list tag
-* @active_class="HTML class"@ HTML class attribute value for the @span@ tag for the current page
-* @html_id="HTML ID"@ HTML ID attribute value for the list tag
-* @wraptag="tag name"@ Tag name (no brackets) for type of list. *Must be "ul" or "ol"*; the default is "ul"
-* @root="mixed"@ starting point for the table of contents. If empty (the default), will show the entire table. If set to an article ID number, will show only the pages below that article in the document tree. If set to "this" or any other word, will use the current page as the root.
-* @add_start="boolean"@ If set, the root page is added as the first item in the table. Unset by default.
-
-h3(#soo_if_multidoc). soo_if_multidoc
-
-h4. Usage
-
-Conditional tag. Requires individual article context.
-
-pre. <txp:soo_if_multidoc>
-    ...show if true...
-<txp:else />
-    ...show if false...
-</txp:soo_if_multidoc>
-
-h4. Attributes
-
-* @start_id="Txp article ID"@ comma-separated list of Txp article IDs. Empty by default.
-
-*soo_if_multidoc* evaluates whether or not the current page belongs to a *Multidoc* collection. If @start_id@ is set, it evaluates whether or not the current page belongs to one of the specified collections.
-
-Typically you would use this in an article form, or in a form called by an article form.
-
-h2(#history). Version History
-
-h3. 1.0.a.7 (6/2/2009)
-
-* @soo_multidoc_pager@: 
-** changed @html_id@ to only apply to @wraptag@
-** added @wrapclass@ and @breakclass@ attributes
-** generally improved @break@ behavior
-* @soo_multidoc_article@ and @soo_multidoc_article_custom@ no longer needed, and have been eliminated (thanks to "net-carver":http://txp-plugins.netcarving.com/ for the suggestion to use MySQL temporary tables, allowing the replacement of about 270 lines of code with about 12)
-
-h3. 1.0.a.6 (5/23/2009)
-
-* Bug fix for using custom field #10 or higher
-* Bug fix for error message when there are no Multidoc articles
-* Now uses v0.2 of *soo_plugin_prefs*
-
-h3. 1.0.a.5 (5/1/2009)
-
-* Added @<txp:soo_multidoc_page_number />@.
-* Fixed a bug regarding multiple @soo_multidoc_pager@ tags on the same page.
-* Added compatability with *soo_plugin_prefs* plugin.
-
-h3. 1.0.a.4 (4/2/2009)
-
-* Added @limit@ and @placeholder@ attributes to @<txp:soo_multidoc_pager />@.
-
-h3. 1.0.a.3 (2/6/2009)
-
-* Fixed @add_title@ bug in @<txp:soo_multidoc_link />@ (caused during upgrade to the newer version of the *soo_txp_obj* library).
-
-h3. 1.0.a.2 (2/5/2009)
-
-* No significant changes, but based on a newer version of the *soo_txp_obj* library.
-
-h3. 1.0.a.1 (2/4/2009)
-
-* Initial release.
-
- </div>
-# --- END PLUGIN HELP ---
--->
-<?php
-}
 
 # --- BEGIN PLUGIN CODE ---
 
@@ -1331,5 +1145,184 @@ function _soo_multidoc_temp_table ( ) {
 register_callback('_soo_multidoc_temp_table', 'pretext_end');
 
 # --- END PLUGIN CODE ---
+
+if (0) {
+?>
+<!-- CSS & HELP
+# --- BEGIN PLUGIN CSS ---
+<style type="text/css">
+div#sed_help pre {padding: 0.5em 1em; background: #eee; border: 1px dashed #ccc;}
+div#sed_help h1, div#sed_help h2, div#sed_help h3, div#sed_help h3 code {font-family: sans-serif; font-weight: bold;}
+div#sed_help h1, div#sed_help h2, div#sed_help h3 {margin-left: -1em;}
+div#sed_help h2, div#sed_help h3 {margin-top: 2em;}
+div#sed_help h1 {font-size: 2.4em;}
+div#sed_help h2 {font-size: 1.8em;}
+div#sed_help h3 {font-size: 1.4em;}
+div#sed_help h4 {font-size: 1.2em;}
+div#sed_help h5 {font-size: 1em;margin-left:1em;font-style:oblique;}
+div#sed_help li {list-style-type: disc;}
+div#sed_help li li {list-style-type: circle;}
+div#sed_help li li li {list-style-type: square;}
+div#sed_help li a code {font-weight: normal;}
+div#sed_help li code:first-child {background: #ddd;padding:0 .3em;margin-left:-.3em;}
+div#sed_help li li code:first-child {background:none;padding:0;margin-left:0;}
+div#sed_help dfn {font-weight:bold;font-style:oblique;}
+div#sed_help .required, div#sed_help .warning {color:red;}
+div#sed_help .default {color:green;}
+</style>
+# --- END PLUGIN CSS ---
+# --- BEGIN PLUGIN HELP ---
+ <div id="sed_help">
+
+h1. soo_multidoc
+
+This is just a bare-bones tag reference. All of these tags require that you have set up the *Multidoc* system on your Textpattern website. A full "User Guide":http://ipsedixit.net/txp/24/multidoc is available at the "author's website":http://ipsedixit.net/.
+
+h2. Contents
+
+* "Tags":#tags
+** "soo_multidoc_link":#soo_multidoc_link
+** "soo_multidoc_pager":#soo_multidoc_pager
+** "soo_multidoc_page_number":#soo_multidoc_page_number
+** "soo_multidoc_toc":#soo_multidoc_toc
+** "soo_if_multidoc":#soo_if_multidoc
+* "Version history":#history
+
+h2(#tags). Tags
+
+h3(#soo_multidoc_link). soo_multidoc_link
+
+h4. Usage
+
+Generates an HTML anchor element, based on document relationship. Can be used as a single or container tag. Requires individual article context.
+
+pre. <txp:soo_multidoc_link rel="Prev" />
+<txp:soo_multidoc_link rel="Next">Continue reading ... </txp:soo_multidoc_link> 
+
+When used as a single tag, the @rel@ value is used for the link text.
+
+h4. Attributes
+
+* @rel="LinkType"@ The "link type":http://www.w3.org/TR/REC-html40/types.html#type-links describing the linked document's relationship to the current page
+* @add_title="boolean"@ Add the linked document's title to the link text
+* @class="HTML class"@ HTML class attribute value for the anchor tag
+* @active_class="HTML class"@ HTML class attribute value if @rel@ refers to the current page (tag will be a @span@ instead of @a@)
+* @html_id="HTML ID"@ HTML ID attribute value for the anchor tag
+* @wraptag="tag name"@ Tag name (no brackets) for element to wrap the anchor
+
+
+h3(#soo_multidoc_pager). soo_multidoc_pager
+
+h4. Usage
+
+Generates a numbered page navigation widget. Requires individual article context.
+
+pre. <txp:soo_multidoc_pager />
+
+h4. Attributes
+
+* @limit="integer"@ Number of pages to show before and after the current page before inserting the @placeholder@ text. Default is @0@, no limit (show all).
+* @placeholder="text"@ Text to show for missing pages (see @limit@). Default is @&hellip;@ (horizontal ellipsis).
+* @class="HTML class"@ HTML class attribute value for the anchor tag
+* @active_class="HTML class"@ HTML class attribute value for the @span@ tag for the current page
+* @html_id="HTML ID"@ HTML ID attribute value for the anchor tag
+* @wraptag="tag name"@ Tag name (no brackets) for element to wrap the anchor
+* @break="mixed"@ Tag name (no brackets) or text to add between items
+
+h3(#soo_multidoc_page_number). soo_multidoc_page_number
+
+h4. Usage
+
+Outputs current page number and total number of pages. Requires individual article context.
+
+pre. <txp:soo_multidoc_page_number />
+
+h4. Attributes
+
+* @class="HTML class"@ HTML class attribute value for the output tag
+* @html_id="HTML ID"@ HTML ID attribute value for the output tag
+* @wraptag="tag name"@ Tag name (no brackets) for output tag. Default is "span"
+* @format="format string"@ Default is "Page {page} of {total}". The tag will output this string, after any occurences of "{page}" have been replaced with the current page number; likewise for "{total}" and the total number of pages.
+
+h3(#soo_multidoc_toc). soo_multidoc_toc
+
+h4. Usage
+
+Generates a structured table of contents. Requires individual article context.
+
+pre. <txp:soo_multidoc_toc />
+
+h4. Attributes
+
+* @class="HTML class"@ HTML class attribute value for the list tag
+* @active_class="HTML class"@ HTML class attribute value for the @span@ tag for the current page
+* @html_id="HTML ID"@ HTML ID attribute value for the list tag
+* @wraptag="tag name"@ Tag name (no brackets) for type of list. *Must be "ul" or "ol"*; the default is "ul"
+* @root="mixed"@ starting point for the table of contents. If empty (the default), will show the entire table. If set to an article ID number, will show only the pages below that article in the document tree. If set to "this" or any other word, will use the current page as the root.
+* @add_start="boolean"@ If set, the root page is added as the first item in the table. Unset by default.
+
+h3(#soo_if_multidoc). soo_if_multidoc
+
+h4. Usage
+
+Conditional tag. Requires individual article context.
+
+pre. <txp:soo_if_multidoc>
+    ...show if true...
+<txp:else />
+    ...show if false...
+</txp:soo_if_multidoc>
+
+h4. Attributes
+
+* @start_id="Txp article ID"@ comma-separated list of Txp article IDs. Empty by default.
+
+*soo_if_multidoc* evaluates whether or not the current page belongs to a *Multidoc* collection. If @start_id@ is set, it evaluates whether or not the current page belongs to one of the specified collections.
+
+Typically you would use this in an article form, or in a form called by an article form.
+
+h2(#history). Version History
+
+h3. 1.0.a.7 (6/2/2009)
+
+* @soo_multidoc_pager@: 
+** changed @html_id@ to only apply to @wraptag@
+** added @wrapclass@ and @breakclass@ attributes
+** generally improved @break@ behavior
+* @soo_multidoc_article@ and @soo_multidoc_article_custom@ no longer needed, and have been eliminated (thanks to "net-carver":http://txp-plugins.netcarving.com/ for the suggestion to use MySQL temporary tables, allowing the replacement of about 270 lines of code with about 12)
+
+h3. 1.0.a.6 (5/23/2009)
+
+* Bug fix for using custom field #10 or higher
+* Bug fix for error message when there are no Multidoc articles
+* Now uses v0.2 of *soo_plugin_prefs*
+
+h3. 1.0.a.5 (5/1/2009)
+
+* Added @<txp:soo_multidoc_page_number />@.
+* Fixed a bug regarding multiple @soo_multidoc_pager@ tags on the same page.
+* Added compatability with *soo_plugin_prefs* plugin.
+
+h3. 1.0.a.4 (4/2/2009)
+
+* Added @limit@ and @placeholder@ attributes to @<txp:soo_multidoc_pager />@.
+
+h3. 1.0.a.3 (2/6/2009)
+
+* Fixed @add_title@ bug in @<txp:soo_multidoc_link />@ (caused during upgrade to the newer version of the *soo_txp_obj* library).
+
+h3. 1.0.a.2 (2/5/2009)
+
+* No significant changes, but based on a newer version of the *soo_txp_obj* library.
+
+h3. 1.0.a.1 (2/4/2009)
+
+* Initial release.
+
+ </div>
+# --- END PLUGIN HELP ---
+-->
+<?php
+}
 
 ?>
