@@ -1283,6 +1283,10 @@ Typically you would use this in an article form, or in a form called by an artic
 
 h2(#history). Version History
 
+h3. 1.0.a.8 (in development)
+
+* change to new method names in soo_txp_obj dev branch
+
 h3. 1.0.a.7 (6/2/2009)
 
 * @soo_multidoc_pager@: 
