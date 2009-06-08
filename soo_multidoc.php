@@ -651,7 +651,7 @@ function soo_multidoc_pager( $atts ) {
 		}
 		else
 			return $wrap_obj
-				->id_($html_id)->tag();
+				->id($html_id)->tag();
 	}
 	else {
 		$out = array();
