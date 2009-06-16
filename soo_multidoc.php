@@ -1133,14 +1133,17 @@ function _soo_multidoc_debug( $message ) {
 function _soo_multidoc_temp_table ( ) {
 // MySQL temporary table to filter Multidoc interior pages from article lists
 	global $pretext, $is_article_list, $soo_multidoc;
-	if ( ! $is_article_list or $pretext['q'] 
-		or $soo_multidoc['list_all'] or empty($soo_multidoc['noindex']) )
-			return;
-	$table = PFX . 'textpattern';
-	if ( _soo_multidoc_ids_init() )
-		if ( safe_query("create temporary table $table select * from $table") )
-			safe_query("delete from $table where ID in (" 
-				. implode(',', $soo_multidoc['noindex']) . ")");
+	if ( ! $is_article_list 
+		or $pretext['q'] 
+		or $soo_multidoc['list_all'] 
+		or ! _soo_multidoc_ids_init()
+		or empty($soo_multidoc['noindex'])
+	)
+		return;
+	$table = safe_pfx('textpattern');
+	safe_query("create temporary table $table 
+		select * from $table where ID not in (" 
+		. implode(',', $soo_multidoc['noindex']) . ")");
 }
 
 register_callback('_soo_multidoc_temp_table', 'pretext_end');
