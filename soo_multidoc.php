@@ -724,10 +724,10 @@ function soo_multidoc_toc( $atts ) {
 		else
 			$start_id = $thisarticle['thisid'];
 		$start_node = $collection->get_sub_node($start_id);
-		$out = $start_node->toc('ul', $thisid, $active_class, $add_start);
+		$out = $start_node->toc($wraptag, $thisid, $active_class, $add_start);
 	}
 	else
-		$out = $collection->toc('ul', $thisid, $active_class, $add_start);
+		$out = $collection->toc($wraptag, $thisid, $active_class, $add_start);
 
 	return $out
 		->class($class)
