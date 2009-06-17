@@ -137,7 +137,6 @@ class Soo_Multidoc_Node extends Soo_Obj {
 
 	// Getters /////////////////////////////////////
 	
-	public function get_id() { return $this->id; }
 	public function get_link_type( $id = null ) { 
 
 		if ( $id == null or $id == $this->id ) {
@@ -151,28 +150,7 @@ class Soo_Multidoc_Node extends Soo_Obj {
 		}
 		return isset($out) ? $out : false;
 	}
-	
-// 	public function get_title( $id = null ) { 
-// 
-// 		if ( $id == null or $id == $this->id ) {
-// 			return $this->title;
-// 		}
-// 		elseif ( is_array($this->children ) ) {
-// 			foreach ( $this->children as $child ) {
-// 				if ( empty($out) )
-// 					$out = $child->get_title($id);
-// 			}
-// 		}
-// 		return isset($out) ? $out : false;
-// 	}
-// 	
-// 	
-// 	public function get_children($index = null) { 
-// 		if ( $index )
-// 			return $this->children[$index];
-// 		return $this->children; 
-// 	}
-	
+		
 	public function get_next( $id = null ) { 
 
 		if ( $id == null or $id == $this->id ) {
@@ -478,7 +456,7 @@ function soo_multidoc_link( $atts, $thing = null ) {
 		
 		switch ( strtolower($match[0]) ) {
 			case $start:
-				$link_id = $collection->get_id();
+				$link_id = $collection->id;
 				break;
 			case $prev:
 				$link_id = $collection->get_prev($thisid);
@@ -581,7 +559,7 @@ function soo_multidoc_pager( $atts ) {
 		$break_obj = null;
 	
 	$page_ids = $collection->next_array();
-	array_unshift($page_ids, $collection->get_id());
+	array_unshift($page_ids, $collection->id);
 	
 	$total = count($page_ids);
 	$page_nums = array_combine($page_ids, range(1, $total));
@@ -681,7 +659,7 @@ function soo_multidoc_page_number( $atts ) {
 	$thisid = $thisarticle['thisid'];
 		
 	$page_ids = $collection->next_array();
-	array_unshift($page_ids, $collection->get_id());
+	array_unshift($page_ids, $collection->id);
 	
 	$num_pages = count($page_ids);
 	$page_nums = array_flip($page_ids);
@@ -754,7 +732,7 @@ function soo_if_multidoc( $atts, $thing ) {
 	
 	$start_ids = do_list($start_id);
 	
-	$ok = ( ! $start_id or in_array($collection->get_id(), $start_ids) )
+	$ok = ( ! $start_id or in_array($collection->id, $start_ids) )
 		? true : false;
 	
 	return parse(EvalElse($thing, $ok));
@@ -829,7 +807,7 @@ function _soo_multidoc_init() {
 		
 	// go back and set 'next' values ///////.................................
 	$next_node = array_shift($tree);
-	$collection->next($next_node->get_id());
+	$collection->next($next_node->id);
 	unset($next_node);
 	$next = $collection->youngest();
 	$to_set = $collection->get_prev($next);
