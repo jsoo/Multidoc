@@ -478,9 +478,11 @@ function soo_multidoc_link( $atts, $thing = null ) {
 	if ( ! isset($url) ) return false;
 	
 	if ( $add_title ) {
-		$data = new Soo_Txp_Article($link_id);
+		$query = new Soo_Txp_Select('textpattern', $link_id);
+		$data = new Soo_Txp_Row($query);
 		$thing .= $data->Title;
 		unset($data);
+		unset($query);
 	}
 	
 	if ( $link_id == $thisid ) {
@@ -917,7 +919,7 @@ function _soo_multidoc_ids_init() {
 		return false;
 	}
 	
-	$query = new Soo_Txp_Article;
+	$query = new Soo_Txp_Select('textpattern');
 	$regexp = '[[:digit:]]';
 	$data = $query->select(array('ID', $custom_field))
 		->regexp($regexp, $custom_field)
@@ -998,7 +1000,7 @@ function _soo_multidoc_data_init() {
 	if ( empty($id_parent) or $custom_field == '' or $custom_field == -1 )
 			return false;
 	
-	$query = new Soo_Txp_Article;
+	$query = new Soo_Txp_Select('textpattern');
 	$rs = $query
 		->select(array('ID', 'Title', 'url_title', 'Section', 'unix_timestamp(Posted) as posted', $custom_field))
 		->rows();
