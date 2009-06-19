@@ -465,22 +465,16 @@ function soo_multidoc_link( $atts, $thing = null ) {
 	if ( ! isset($url) ) return false;
 	
 	if ( $add_title ) {
-		$query = new soo_txp_select('textpattern', $link_id);
-		$data = new soo_txp_row($query);
-		$thing .= $data->Title;
-		unset($data);
-		unset($query);
+		$article = new soo_txp_row(new soo_txp_select('textpattern', $link_id));
+		$thing .= $article->Title;
+		unset($article);
 	}
 	
-	if ( $link_id == $thisid ) {
-		$tag = new soo_html_span;
-		$tag->class($active_class);
-	}
-	else {
-		$tag = new soo_html_anchor;
-		$tag->href($url)
-			->rel($rel);
-	}
+	if ( $link_id == $thisid )
+		$tag = new soo_html_span(array('class' => $active_class));
+
+	else
+		$tag = new soo_html_anchor(array('href' => $url, 'rel' => $rel));
 	
 	$tag->contents( $thing ? $thing : $rel );
 		
@@ -568,11 +562,12 @@ function soo_multidoc_pager( $atts ) {
 		$n = array_shift($show_nums);
 		if ( $n == $this_num )
 			$objs[] = new soo_html_span(array('class' => $active_class), $n);
-		else {
-			$url = $soo_multidoc['data'][$page_ids[$n - 1]]['url'];
-			$page = new soo_html_anchor($url);
-			$objs[] = $page->contents($n)->class($class);
-		}			
+		else
+			$objs[] = new soo_html_anchor(array(
+				'href' => $soo_multidoc['data'][$page_ids[$n - 1]]['url'],
+				'class' => $class), $n
+			);
+			
 		$fill = $show_nums ? 
 			( $show_nums[0] > $n + 1 ? $placeholder : $break ) : '';
 		if ( $fill )
@@ -610,11 +605,9 @@ function soo_multidoc_pager( $atts ) {
 			$wrap_obj->contents($obj);
 
 		if ( $wraptag == 'table' ) {
-			$tbody = new soo_html_tbody;
-			$tbody->contents($wrap_obj);
-			$table = new soo_html_table;
-			return $table->contents($tbody)
-				->id($html_id)->tag();
+			$table = new soo_html_table(array('id' => $html_id),
+				new soo_html_tbody('', $wrap_obj));
+			return $table->tag();
 		}
 		else
 			return $wrap_obj
