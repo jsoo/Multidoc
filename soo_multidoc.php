@@ -900,10 +900,13 @@ function _soo_multidoc_ids_init() {
 	}
 	
 	$query = new soo_txp_select('textpattern');
-	$regexp = '[[:digit:]]';
-	$data = $query->select(array('ID', $custom_field))
-		->regexp($regexp, $custom_field)
-		->extract_field($custom_field, 'ID');
+// 	$data = $query->select(array('ID', $custom_field))
+// 		->regexp('[[:digit:]]', $custom_field)
+// 		->extract_field($custom_field, 'ID');
+	$query->select(array('ID', $custom_field))
+ 		->regexp('[[:digit:]]', $custom_field);
+ 	$data = new soo_txp_rowset($query);
+ 	$data = $data->field_vals($custom_field, 'ID');
 	unset($query);
 	
 	foreach ( $data as $parent => $field ) {
