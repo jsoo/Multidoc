@@ -342,53 +342,40 @@ class soo_multidoc_node extends soo_obj {
 			else
 				return false;
 
-			if ( $include_self ) {
-				$li = new soo_html_li;
-				$url = $soo_multidoc['data'][$this->id]['url'];
-				$anchor = new soo_html_anchor($url);
-				$anchor->contents($this->title);
-				$li->contents($anchor);
-				$out->contents($li);
-				unset($anchor);
-				unset($li);
-				$include_self = false;
-			}
+			if ( $include_self )
+				$out->contents(
+					new soo_html_li('',
+						new soo_html_anchor(
+							$soo_multidoc['data'][$this->id]['url'], $this->title
+				)));
+			$include_self = false;
 		
 			foreach ( $this->children as $child ) {
 				if ( is_array($child->children) ) {
-					if ( $child->id == $current_page ) {
-						$item = new soo_html_span;
-						$item->class($active_class);
-					}
-					else {
-						$item = new soo_html_anchor;
-						$url = $soo_multidoc['data'][$child->id]['url'];
-						$item->href($url);
-					}
+					if ( $child->id == $current_page )
+						$item = new soo_html_span(
+							array('class' => $active_class)
+						);
+					else
+						$item = new soo_html_anchor(
+							$soo_multidoc['data'][$child->id]['url']
+						);
 					$item->contents($child->title);
 				}
-
-				$li = new soo_html_li;
-				if ( isset($item) )
-					$li->contents($item);
-				$li->contents($child->toc($type, $current_page, $active_class, $include_self));
+				$li = new soo_html_li('', isset($item) ? $item : null);
+				$li->contents($child->toc($type, $current_page, $active_class, false));
 				$out->contents($li);
 				unset($item);
 				unset($li);
 			}
-
 		}
 		else {
-			
-			if ( $this->id == $current_page ) {
-				$out = new soo_html_span;
-				$out->class($active_class);
-			}
-			else {
-				$out = new soo_html_anchor;
-				$url = $soo_multidoc['data'][$this->id]['url'];
-				$out->href($url);
-			}
+			if ( $this->id == $current_page )
+				$out = new soo_html_span(array('class' => $active_class));
+			else
+				$out = new soo_html_anchor(
+					$soo_multidoc['data'][$this->id]['url']
+				);
 			$out->contents($this->title);
 		}
 		return isset($out) ? $out : false;
@@ -580,7 +567,7 @@ function soo_multidoc_pager( $atts ) {
 	while ( $show_nums ) {
 		$n = array_shift($show_nums);
 		if ( $n == $this_num )
-			$objs[] = new soo_html_span($n, array('class' => $active_class));
+			$objs[] = new soo_html_span(array('class' => $active_class), $n);
 		else {
 			$url = $soo_multidoc['data'][$page_ids[$n - 1]]['url'];
 			$page = new soo_html_anchor($url);
@@ -589,7 +576,7 @@ function soo_multidoc_pager( $atts ) {
 		$fill = $show_nums ? 
 			( $show_nums[0] > $n + 1 ? $placeholder : $break ) : '';
 		if ( $fill )
-			$objs[] = new soo_html_span($fill);
+			$objs[] = new soo_html_span('', $fill);
 	}
 	
 	if ( $break_obj ) {
@@ -603,7 +590,7 @@ function soo_multidoc_pager( $atts ) {
 		}
 		else
 			foreach ( $objs as $i => $obj )
-				$objs[$i] = new $break_obj($obj);
+				$objs[$i] = new $break_obj('', $obj);
 		foreach ( $objs as $obj )
 			if ( $obj instanceof $break_obj )
 				$obj->class($breakclass);
