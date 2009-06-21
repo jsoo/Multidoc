@@ -131,66 +131,34 @@ class soo_multidoc_node extends soo_obj {
 	
 
 	public function __construct( $id ) {
-		if ( is_numeric($id) ) 
-			$this->id = intval($id);
+		$this->id = is_numeric($id) ? intval($id) : '';
 	}
 
 	// Getters /////////////////////////////////////
+	// if $id argument given, will search child nodes
 	
 	public function get_link_type( $id = null ) { 
-
-		if ( $id == null or $id == $this->id ) {
-			return $this->link_type;
-		}
-		elseif ( is_array($this->children ) ) {
-			foreach ( $this->children as $child ) {
-				if ( empty($out) )
-					$out = $child->get_link_type($id);
-			}
-		}
-		return isset($out) ? $out : false;
+		
+		$node = &$this->get_sub_node($id);
+		return $node->link_type;
 	}
 		
 	public function get_next( $id = null ) { 
 
-		if ( $id == null or $id == $this->id ) {
-			return $this->next;
-		}
-		elseif ( is_array($this->children ) ) {
-			foreach ( $this->children as $child ) {
-				if ( empty($out) )
-					$out = $child->get_next($id);
-			}
-		}
-		return isset($out) ? $out : false;
+		$node = &$this->get_sub_node($id);
+		return $node->next;
 	}
 	
 	public function get_prev( $id = null ) { 
 
-		if ( $id == null or $id == $this->id ) {
-			return $this->prev;
-		}
-		elseif ( is_array($this->children ) ) {
-			foreach ( $this->children as $child ) {
-				if ( empty($out) )
-					$out = $child->get_prev($id);
-			}
-		}
-		return isset($out) ? $out : false;
+		$node = &$this->get_sub_node($id);
+		return $node->prev;
 	}
 	
 	public function get_up( $id = null ) { 
 
-		if ( $id == null or $id == $this->id ) {
-			return $this->up;
-		}
-		elseif ( is_array($this->children ) ) {
-			foreach ( $this->children as $child ) {
-				if ( empty($out) )
-					$out = $child->get_up($id);
-			}
-		}
-		return isset($out) ? $out : false;
+		$node = &$this->get_sub_node($id);
+		return $node->up;
 	}
 		
 	// Utilities /////////////////////////////////////
@@ -221,91 +189,65 @@ class soo_multidoc_node extends soo_obj {
 	// return the id of this node's youngest descendant
 	
 		if ( is_array($this->children) ) {
-		
 			$my_children = $this->children;
-			
 			$my_youngest = array_pop($my_children);
-			
 			$out = $my_youngest->youngest();
 		}
 		else
 			return $this->id;
 		
 		return $out;
-	
 	}
 	
 	public function are_you_my_ancestor( $me, $you ) {
 	
 		$my_parent = $this->get_up($me);
-		if (  $my_parent == $you ) {
-			return true;
-		}
-		elseif ( $my_parent ) {
+		if (  $my_parent == $you ) return true;
+		if ( $my_parent )
 			return $this->are_you_my_ancestor($my_parent, $you);
-		}
-		else	
-			return false;
 	}
 	
 	public function get_id_by_link_type( $link_type ) {
 	
-		if ( strtolower($link_type) == $this->link_type ) {
+		if ( strtolower($link_type) == $this->link_type )
 			return $this->id;
-		}
-		elseif ( is_array($this->children ) ) {
+		
+		if ( is_array($this->children ) ) {
 			foreach ( $this->children as $child ) {
 				if ( empty($out) )
 					$out = $child->get_id_by_link_type($link_type);
 			}
 		}
 		return isset($out) ? $out : false;
-	
 	}
 	
 	public function get_next_by_link_type( $id, $link_type ) {
 	
 		$next = $this->get_next($id);
-
-		if ( $next ) {
-			if ( strtolower($this->get_link_type($next)) == $link_type )
-				return $next;
-			
-			else 
-				return $this->get_next_by_link_type($next, $link_type);
-		}
-		else
-			return false;
+		if ( $next )
+			return strtolower($this->get_link_type($next)) == $link_type ?
+				$next : $this->get_next_by_link_type($next, $link_type);
 	}
 	
 	public function get_prev_by_link_type( $id, $link_type ) {
 	
 		$prev = $this->get_prev($id);
-
-		if ( $prev ) {
-			if ( strtolower($this->get_link_type($prev)) == $link_type )
-				return $prev;
-			
-			else 
-				return $this->get_prev_by_link_type($prev, $link_type);
-		}
-		else
-			return false;
+		if ( $prev )
+			return strtolower($this->get_link_type($prev)) == $link_type ?
+				$prev : $this->get_prev_by_link_type($prev, $link_type);
 	}
 	
 	public function get_sub_node( $id ) {
 	
-		if ( $this->id == $id )
+		if ( $this->id == $id or is_null($id) )
 			return $this;
 		
-		elseif ( is_array($this->children) )
-			foreach ( $this->children as $child ) {
+		if ( is_array($this->children) )
+			foreach ( $this->children as $child )
 				if ( empty($out) )
 					$out = $child->get_sub_node($id);
-			}
 		
-		if ( isset($out) )
-			return $out;
+		return isset($out) ? $out : false;
 	}
 	
 	public function next_array() {
