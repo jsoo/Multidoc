@@ -759,7 +759,7 @@ function _soo_multidoc_init() {
 	extract($soo_multidoc);
 	
 	// is this a Multidoc article?
-	if ( ! in_array($thisid, array_keys($id_parent)) )
+	if ( ! isset($id_parent[$thisid]) )
 		return _soo_multidoc_debug();
 	
 	// Start page for current article's Multidoc collection
@@ -900,7 +900,7 @@ function _soo_multidoc_ids_init() {
 			else
 				$id_children[$parent] = $children[1];
 			foreach ( $children[1] as $child ) {
-				if ( array_key_exists($child, $noindex) ) {
+				if ( isset($noindex[$child]) ) {
 					$duplicates[] = $child;
 					$duplicates[] = $parent;
 				}
@@ -976,11 +976,8 @@ function _soo_multidoc_data_init() {
 	foreach ( $rs as $r ) {
 		$id = $r['ID'];
 		$all_ids[$id] = $id;
-		if ( in_array($id, array_keys($id_parent)) ) {
-			if ( in_array($id, array_keys($id_root)) )
-				$r['root'] = $id_root[$id];
-			else
-				$r['root'] = $id;
+		if ( isset($id_parent[$id]) ) {
+			$r['root'] = isset($id_root[$id]) ? $id_root[$id] : $id;
 			$r['parent'] = $id_parent[$id];
 			$r['link_type'] = $id_link_type[$id];
 			$r['url'] = _soo_multidoc_url($r);	
