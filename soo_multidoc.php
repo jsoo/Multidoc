@@ -742,32 +742,25 @@ function _soo_multidoc_init() {
 	
 	// article context check ...............................................
 	assert_article();
-	if ( empty($thisarticle) ) {
-		$soo_multidoc['init'] = true;
-		return false;
-	}
+	if ( empty($thisarticle) )
+		return _soo_multidoc_debug();
+	
 	$thisid = $thisarticle['thisid'];
 	
 	
 	// find Multidoc custom field ..........................................
 	$custom_field = _soo_multidoc_custom_field();	// e.g. 'custom_2'
-	if ( empty($custom_field) ) {
-		$soo_multidoc['init'] = true;
-		return false;
-	}
+	if ( empty($custom_field) )
+		return _soo_multidoc_debug();
 	
-	if ( ! _soo_multidoc_data_init() ) {
-		$soo_multidoc['init'] = true;
-		return false;
-	}
+	if ( ! _soo_multidoc_data_init() )
+		return _soo_multidoc_debug();
 
 	extract($soo_multidoc);
 	
 	// is this a Multidoc article?
-	if ( ! in_array($thisid, array_keys($id_parent)) ) {
-		$soo_multidoc['init'] = true;
-		return false;
-	}
+	if ( ! in_array($thisid, array_keys($id_parent)) )
+		return _soo_multidoc_debug();
 	
 	// Start page for current article's Multidoc collection
 	$start = isset($id_root[$thisid]) ? $id_root[$thisid] : $thisid;
@@ -775,10 +768,8 @@ function _soo_multidoc_init() {
 	
 	// build document tree ///////...........................................
 	$tree = _soo_multidoc_build_tree($start);
-	if ( ! is_array($tree) ) {
-		_soo_multidoc_debug($tree);
-		return false;
-	}
+	if ( ! is_array($tree) )
+		return _soo_multidoc_debug($tree);
 	
 	// _soo_multidoc_build_tree() gets everything but the Start node itself
 	$collection = new soo_multidoc_node($start);
@@ -798,15 +789,12 @@ function _soo_multidoc_init() {
 		$next = $to_set;
 		$to_set = $next_to_set;
 	}
-	if ( $to_set ) {
-		_soo_multidoc_debug($to_set);
-		return false;
-	}
+	if ( $to_set )
+		return _soo_multidoc_debug($to_set);
 
 
 	// Success!!! ///////...................................................
-	$soo_multidoc['collection'] = $collection;
-	unset($collection);
+	$soo_multidoc['collection'] = &$collection;
 	$soo_multidoc['init'] = true;
 	$soo_multidoc['status'] = true;
 	return true;
@@ -858,11 +846,8 @@ function _soo_multidoc_custom_field() {
 	global $soo_multidoc, $prefs;
 	$f = $soo_multidoc['custom_field'];
 	
-	if ( $f == -1 )
-		return false;
-	
-	if ( $f )
-		return $f;
+	if ( $f == -1 ) return false;	
+	if ( $f ) return $f;
 	
 	$name = $soo_multidoc['custom_field_name'];
 
@@ -872,11 +857,10 @@ function _soo_multidoc_custom_field() {
 				$soo_multidoc['custom_field'] = $match[1];	// e.g. 'custom_2'
 				return $match[1];
 			}
-	_soo_multidoc_debug(
+	$soo_multidoc['custom_field'] = -1;
+	return _soo_multidoc_debug(
 		soo_multidoc_gTxt('custom_field') . $name . soo_multidoc_gTxt('not_found')
 	);
-	$soo_multidoc['custom_field'] = -1;
-	return false;
 }
 
 function _soo_multidoc_ids_init() {
@@ -895,14 +879,10 @@ function _soo_multidoc_ids_init() {
 	$duplicates = array();
 	
 	$custom_field = _soo_multidoc_custom_field();	// e.g. 'custom_2'
-	if ( empty($custom_field) ) {
+	if ( empty($custom_field) )
 		return false;
-	}
 	
 	$query = new soo_txp_select('textpattern');
-// 	$data = $query->select(array('ID', $custom_field))
-// 		->regexp('[[:digit:]]', $custom_field)
-// 		->extract_field($custom_field, 'ID');
 	$query->select(array('ID', $custom_field))
  		->regexp('[[:digit:]]', $custom_field);
  	$data = new soo_txp_rowset($query);
@@ -1071,10 +1051,14 @@ function _soo_multidoc_url( $article_array ) {
 
 }
 
-function _soo_multidoc_debug( $message ) {
+function _soo_multidoc_debug( $message = '' ) {
 // display error message
 
 	global $soo_multidoc;
+	
+	$soo_multidoc['init'] = true;
+	
+	if ( ! $message ) return false;
 	
 	$prefix = 'soo_multidoc: ';
 	$postfix = n;
@@ -1089,8 +1073,8 @@ function _soo_multidoc_debug( $message ) {
 		$postfix = '<br />' . $postfix;
 	
 	echo $prefix . $message . $postfix;
-
-	$soo_multidoc['init'] = true;
+	
+	return false;
 }
 
 function _soo_multidoc_temp_table ( ) {
