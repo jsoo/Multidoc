@@ -137,28 +137,20 @@ class soo_multidoc_node extends soo_obj {
 	// Getters /////////////////////////////////////
 	// if $id argument given, will search child nodes
 	
-	public function get_link_type( $id = null ) { 
-		
-		$node = &$this->get_sub_node($id);
-		return $node->link_type;
+	public function get_link_type( $id = null ) {
+		return $this->get_sub_node_prop($id, 'link_type');
 	}
 		
 	public function get_next( $id = null ) { 
-
-		$node = &$this->get_sub_node($id);
-		return $node->next;
+		return $this->get_sub_node_prop($id, 'next');
 	}
 	
 	public function get_prev( $id = null ) { 
-
-		$node = &$this->get_sub_node($id);
-		return $node->prev;
+		return $this->get_sub_node_prop($id, 'prev');
 	}
 	
 	public function get_up( $id = null ) { 
-
-		$node = &$this->get_sub_node($id);
-		return $node->up;
+		return $this->get_sub_node_prop($id, 'up');
 	}
 		
 	// Utilities /////////////////////////////////////
@@ -248,6 +240,11 @@ class soo_multidoc_node extends soo_obj {
 					$out = $child->get_sub_node($id);
 		
 		return isset($out) ? $out : false;
+	}
+	
+	public function get_sub_node_prop( $id, $prop ) {
+		$node = &$this->get_sub_node($id);
+		return $node->$prop;
 	}
 	
 	public function next_array() {
