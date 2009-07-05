@@ -6,7 +6,7 @@
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
+// the Free Software Foundation, either version 2 of the License, or
 // (at your option) any later version.
 // 
 // This program is distributed in the hope that it will be useful,
@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-$plugin['version'] = '1.0.a.7';
+$plugin['version'] = '1.0.b.1';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/';
 $plugin['description'] = 'Textpattern plugin';
@@ -1170,9 +1170,11 @@ Typically you would use this in an article form, or in a form called by an artic
 
 h2(#history). Version History
 
-h3. 1.0.a.8 (in development)
+h3. 1.0.b.1 (7/5/2009)
 
-* change to new method names in soo_txp_obj dev branch
+* adapted to v1.0.b.1 of the underlying *soo_txp_obj* library
+* code cleaning
+* downshift to v2.0 of the GPL
 
 h3. 1.0.a.7 (6/2/2009)
 
