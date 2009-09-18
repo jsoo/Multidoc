@@ -1112,7 +1112,7 @@ h4. Attributes
 * @placeholder="text"@ Text to show for missing pages (see @limit@). Default is @&hellip;@ (horizontal ellipsis).
 * @class="HTML class"@ HTML class attribute value for the anchor tag
 * @active_class="HTML class"@ HTML class attribute value for the @span@ tag for the current page
-* @html_id="HTML ID"@ HTML ID attribute value for the anchor tag
+* @html_id="HTML ID"@ HTML ID attribute value for the wraptag
 * @wraptag="tag name"@ Tag name (no brackets) for element to wrap the anchor
 * @break="mixed"@ Tag name (no brackets) or text to add between items
 
