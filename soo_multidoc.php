@@ -17,42 +17,80 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-$plugin['version'] = '1.0.b.1';
+$plugin['version'] = '1.0.b.2';
 $plugin['author'] = 'Jeff Soo';
-$plugin['author_uri'] = 'http://ipsedixit.net/';
-$plugin['description'] = 'Textpattern plugin';
+$plugin['author_uri'] = 'http://ipsedixit.net/txp/';
+$plugin['description'] = 'Create structured multi-page documents';
 $plugin['type'] = 1; 
 
-@include_once('zem_tpl.php');
+if (!defined('PLUGIN_HAS_PREFS')) define('PLUGIN_HAS_PREFS', 0x0001); 
+if (!defined('PLUGIN_LIFECYCLE_NOTIFY')) define('PLUGIN_LIFECYCLE_NOTIFY', 0x0002); 
+$plugin['flags'] = PLUGIN_HAS_PREFS | PLUGIN_LIFECYCLE_NOTIFY;
+
+if (!defined('txpinterface'))
+	@include_once('zem_tpl.php');
 
 # --- BEGIN PLUGIN CODE ---
 
 require_plugin('soo_txp_obj');
+@require_plugin('soo_plugin_pref');		// optional
 
   //---------------------------------------------------------------------//
  //									Globals								//
 //---------------------------------------------------------------------//
 
-global $soo_multidoc, $plugins;
+global $soo_multidoc;
 
 $soo_multidoc = array(
-	
-	'custom_field_name'	=>	'Multidoc',
 	'custom_field'		=>	'',
-	'dev_domain'		=>	'my.development.domain',
 	'init'				=>	false,
 	'status'			=>	false,
-	'list_all'			=>	false,
 	'collection'		=>	'',
 	'noindex'			=>	'',
 	'id_parent'			=>	'',
 	'data'				=>	'',
-	
 );
 
-if ( in_array('soo_plugin_prefs', $plugins) ) {
-	require_plugin('soo_plugin_prefs');
-	$soo_multidoc = soo_plugin_prefs($soo_multidoc, 'soo_multidoc');
+$soo_multidoc_prefs = function_exists('soo_plugin_pref_vals') ?
+	soo_plugin_pref_vals('soo_multidoc') : soo_multidoc_defaults();
+foreach ( $soo_multidoc_prefs as $name => $val )
+	$soo_multidoc[$name] = is_array($val) ? $val['val'] : $val;
+
+add_privs('plugin_prefs.soo_multidoc','1,2');
+add_privs('plugin_lifecycle.soo_multidoc','1,2');
+register_callback('soo_multidoc_prefs', 'plugin_prefs.soo_multidoc');
+register_callback('soo_multidoc_prefs', 'plugin_lifecycle.soo_multidoc');
+
+function soo_multidoc_prefs( $event, $step ) {
+	if ( function_exists('soo_plugin_pref') )
+		return soo_plugin_pref($event, $step, soo_multidoc_defaults());
+	if ( substr($event, 0, 12) == 'plugin_prefs' ) {
+		$plugin = substr($event, 12);
+		$message = '<p><br /><strong>' . gTxt('edit') . " $plugin " . 
+			gTxt('edit_preferences') . ':</strong><br />' . gTxt('install_plugin') . 
+			' <a href="http://ipsedixit.net/txp/92/soo_plugin_pref">soo_plugin_pref</a></p>';
+		pagetop(gTxt('edit_preferences') . " &#8250; $plugin", $message);
+	}
+}
+
+function soo_multidoc_defaults( ) {
+	return array(
+		'custom_field_name'		=>	array(
+			'val'	=>	'Multidoc',
+			'html'	=>	'text_input',
+			'text'	=>	'Custom field name',
+		),
+		'dev_domain'	=>	array(
+			'val'	=>	'',
+			'html'	=>	'text_input',
+			'text'	=>	'Development domain (no http:// or closing slash)',
+		),
+		'list_all'	=>	array(
+			'val'	=>	0,
+			'html'	=>	'yesnoradio',
+			'text'	=>	'Show Multidoc sub-pages in article lists?',
+		),
+	);
 }
 
   //---------------------------------------------------------------------//
@@ -183,12 +221,10 @@ class soo_multidoc_node extends soo_obj {
 		if ( is_array($this->children) ) {
 			$my_children = $this->children;
 			$my_youngest = array_pop($my_children);
-			$out = $my_youngest->youngest();
+			return $my_youngest->youngest();
 		}
 		else
 			return $this->id;
-		
-		return $out;
 	}
 	
 	public function are_you_my_ancestor( $me, $you ) {
@@ -285,8 +321,8 @@ class soo_multidoc_node extends soo_obj {
 				$out->contents(
 					new soo_html_li('',
 						new soo_html_anchor(
-							$soo_multidoc['data'][$this->id]['url'], $this->title
-				)));
+							$soo_multidoc['data'][$this->id]['url'], $this->title)
+				));
 			$include_self = false;
 		
 			foreach ( $this->children as $child ) {
@@ -348,8 +384,7 @@ function soo_multidoc_link( $atts, $thing = null ) {
 	$up = soo_multidoc_gTxt('up');
 	$next = soo_multidoc_gTxt('next');
 	$prev = soo_multidoc_gTxt('prev');
-	
-	
+		
 	global $thisarticle;
 	$collection = $soo_multidoc['collection'];
 	$thisid = $thisarticle['thisid'];
@@ -403,11 +438,8 @@ function soo_multidoc_link( $atts, $thing = null ) {
 	
 	if ( ! isset($url) ) return false;
 	
-	if ( $add_title ) {
-		$article = new soo_txp_row(new soo_txp_select('textpattern', $link_id));
-		$thing .= $article->Title;
-		unset($article);
-	}
+	if ( $add_title )
+		$thing .= $collection->get_sub_node_prop($link_id, 'title');
 	
 	if ( $link_id == $thisid )
 		$tag = new soo_html_span(array('class' => $active_class));
@@ -421,11 +453,9 @@ function soo_multidoc_link( $atts, $thing = null ) {
 		$tag_class = 'soo_html_' . $wraptag;
 		if ( class_exists($tag_class) ) {
 			$wraptag = new $tag_class;
-			return $wraptag
-				->contents($tag)
-				->class($class)
-				->id($html_id)
-				->tag();
+			return $wraptag->contents($tag)->class($class)->
+				id($html_id)->
+				tag();
 		}
 	}
 	
@@ -504,8 +534,8 @@ function soo_multidoc_pager( $atts ) {
 		else
 			$objs[] = new soo_html_anchor(array(
 				'href' => $soo_multidoc['data'][$page_ids[$n - 1]]['url'],
-				'class' => $class), $n
-			);
+				'class' => $class), $n)
+			;
 			
 		$fill = $show_nums ? 
 			( $show_nums[0] > $n + 1 ? $placeholder : $break ) : '';
@@ -549,8 +579,7 @@ function soo_multidoc_pager( $atts ) {
 			return $table->tag();
 		}
 		else
-			return $wrap_obj
-				->id($html_id)->tag();
+			return $wrap_obj->id($html_id)->tag();
 	}
 	else {
 		$out = array();
@@ -628,11 +657,62 @@ function soo_multidoc_toc( $atts ) {
 	else
 		$out = $collection->toc($wraptag, $thisid, $active_class, $add_start);
 
-	return $out
-		->class($class)
-		->id($html_id)
-		->tag();
+	return $out->class($class)->id($html_id)->tag();
 
+}	
+
+function soo_multidoc_page_title( $atts ) {
+// Output tag: replacement for <txp:page_title />
+// Requires article context
+// If a Multidoc non-Start page, Start title will be added to output. 
+// Otherwise standard page_title() is returned
+
+	extract(lAtts(array(
+ 		'separator'		=>	': ',
+	), $atts));
+	
+	global $soo_multidoc, $sitename, $thisarticle;
+	if ( ! ( _soo_multidoc_init() and $soo_multidoc['status'] ) ) 
+		return page_title($atts);
+	
+	$collection = $soo_multidoc['collection'];
+	$thisid = $thisarticle['thisid'];
+
+	return htmlspecialchars($sitename . $separator . $collection->title . 
+		( $collection->id != $thisid ? 
+			$separator . $collection->get_sub_node_prop($thisid, 'title') 
+			: '' 
+		)
+	);
+}	
+
+function soo_multidoc_breadcrumbs( $atts ) {
+// Output tag: show higher levels in Collection
+// Requires article context
+
+	extract(lAtts(array(
+ 		'separator'		=>	': ',
+	), $atts));
+	
+	global $soo_multidoc, $thisarticle;
+	if ( ! ( _soo_multidoc_init() and $soo_multidoc['status'] ) ) 
+		return;
+	
+	$collection = $soo_multidoc['collection'];
+	$this_node = $collection->get_sub_node($thisarticle['thisid']);
+	
+	$crumbs[] = $this_node->title;
+	
+	while ( $this_node->link_type != 'Start' ) {
+		$parent = $this_node->get_up();
+		$this_node = $collection->get_sub_node($parent);
+		$url = $soo_multidoc['data'][$parent]['url'];
+		$tag = new soo_html_anchor(array('href' => $url), 
+			escape_title($this_node->title));
+		array_unshift($crumbs, $tag->tag());
+	}
+	
+	return implode($separator, $crumbs);
 }	
 
 function soo_if_multidoc( $atts, $thing ) {
@@ -903,9 +983,15 @@ function _soo_multidoc_data_init() {
 			return false;
 	
 	$query = new soo_txp_select('textpattern');
-	$rs = $query
-		->select(array('ID', 'Title', 'url_title', 'Section', 'unix_timestamp(Posted) as posted', $custom_field))
-		->rows();
+	$rs = $query->
+		select(array(
+			'ID', 
+			'Title', 
+			'url_title', 
+			'Section', 
+			'unix_timestamp(Posted) as posted', 
+			$custom_field)
+			)->rows();
 	unset($query);
 	
 	$out = array();
@@ -1016,16 +1102,16 @@ function _soo_multidoc_debug( $message = '' ) {
 function _soo_multidoc_temp_table ( ) {
 // MySQL temporary table to filter Multidoc interior pages from article lists
 	global $pretext, $is_article_list, $soo_multidoc;
-	if ( ! $is_article_list 
-		or $pretext['q'] 
-		or $soo_multidoc['list_all'] 
-		or ! _soo_multidoc_ids_init()
-		or empty($soo_multidoc['noindex'])
+	if ( ! $is_article_list or
+		$pretext['q'] or
+		$soo_multidoc['list_all'] or
+		! _soo_multidoc_ids_init() or
+		empty($soo_multidoc['noindex'])
 	)
 		return;
 	$table = safe_pfx('textpattern');
-	safe_query("create temporary table $table 
-		select * from $table where ID not in (" 
+	safe_query(
+		"create temporary table $table select * from $table where ID not in (" 
 		. implode(',', $soo_multidoc['noindex']) . ")");
 }
 
@@ -1072,6 +1158,7 @@ h2. Contents
 ** "soo_multidoc_pager":#soo_multidoc_pager
 ** "soo_multidoc_page_number":#soo_multidoc_page_number
 ** "soo_multidoc_toc":#soo_multidoc_toc
+** "soo_multidoc_page_title":#soo_multidoc_page_title
 ** "soo_if_multidoc":#soo_if_multidoc
 * "Version history":#history
 
@@ -1148,6 +1235,30 @@ h4. Attributes
 * @root="mixed"@ starting point for the table of contents. If empty (the default), will show the entire table. If set to an article ID number, will show only the pages below that article in the document tree. If set to "this" or any other word, will use the current page as the root.
 * @add_start="boolean"@ If set, the root page is added as the first item in the table. Unset by default.
 
+h3(#soo_multidoc_page_title). soo_multidoc_page_title
+
+h4. Usage
+
+Drop-in replacement for the core @title@ tag. On a *Multidoc* page, adds the Start page title before the page title (unless it is the Start page). Otherwise the tag simply returns standard @title@ output.
+
+pre. <txp:soo_multidoc_page_title />
+
+h4. Attributes
+
+* @separator="text"@ text between title segments; default is ": "
+
+h3(#soo_multidoc_breadcrumbs). soo_multidoc_breadcrumbs
+
+h4. Usage
+
+Output a linked breadcrumb trail, useful for hierarchical collections.
+
+pre. <txp:soo_multidoc_breadcrumbs />
+
+h4. Attributes
+
+* @separator="text"@ text between segments; default is ": "
+
 h3(#soo_if_multidoc). soo_if_multidoc
 
 h4. Usage
@@ -1169,6 +1280,13 @@ h4. Attributes
 Typically you would use this in an article form, or in a form called by an article form.
 
 h2(#history). Version History
+
+h3. 1.0.b.2 (9/18/2009)
+
+* New tags: 
+** @soo_multidoc_page_title@ (drop-in replacement for @page_title@)
+** @soo_multidoc_breadcrumbs@ breadcrumb trail within Collections
+* changed to new *soo_plugin_pref* plugin for preference management
 
 h3. 1.0.b.1 (7/5/2009)
 
