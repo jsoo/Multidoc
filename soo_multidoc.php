@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-$plugin['version'] = '1.0.b.2';
+$plugin['version'] = '1.0.b.3';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/txp/';
 $plugin['description'] = 'Create structured multi-page documents';
@@ -89,6 +89,11 @@ function soo_multidoc_defaults( ) {
 			'val'	=>	0,
 			'html'	=>	'yesnoradio',
 			'text'	=>	'Show Multidoc sub-pages in article lists?',
+		),
+		'posted_time'	=>	array(
+			'val'	=>	'past',
+			'html'	=>	'text_input',
+			'text'	=>	'Show articles posted &lsquo;past&rsquo;, &lsquo;future&rsquo;, or &lsquo;any&rsquo;',
 		),
 	);
 }
@@ -900,6 +905,23 @@ function _soo_multidoc_ids_init() {
 	$custom_field = _soo_multidoc_custom_field();	// e.g. 'custom_2'
 	if ( empty($custom_field) )
 		return false;
+
+	$query = new soo_txp_select('textpattern');
+	$query->select('ID')->where('Status', 3, '>');	// live or sticky status
+	if ( ! get_pref('publish_expired_articles') ) {
+		$query->where_clause('(now() <= Expires or Expires = ' . 
+			NULLDATETIME . ')');
+	}
+	switch ( $soo_multidoc['posted_time'] ) {
+		case 'past':
+			$query->where_clause('Posted <= now()');
+			break;
+		case 'future':
+			$query->where_clause('Posted > now()');
+			break;
+	}
+	$all_ids = new soo_txp_rowset($query);
+ 	$all_ids = $all_ids->field_vals('ID');	
 	
 	$query = new soo_txp_select('textpattern');
 	$query->select(array('ID', $custom_field))
@@ -909,23 +931,29 @@ function _soo_multidoc_ids_init() {
 	unset($query);
 	
 	foreach ( $data as $parent => $field ) {
-		$groups = do_list(strtolower($field));
-		foreach ( $groups as $group ) {
-			preg_match_all('/\s(\d+)/', $group, $children);
-			preg_match('/^\s*(\w+)\s/', $group, $link_type);
-			if ( isset($id_children[$parent]) )
-				foreach ( $children[1] as $child )
-					array_push($id_children[$parent], $child);
-			else
-				$id_children[$parent] = $children[1];
-			foreach ( $children[1] as $child ) {
-				if ( isset($noindex[$child]) ) {
-					$duplicates[] = $child;
-					$duplicates[] = $parent;
+		if ( in_array($parent, $all_ids) ) {
+			$groups = do_list(strtolower($field));
+			foreach ( $groups as $group ) {
+				preg_match_all('/\s(\d+)/', $group, $children);
+				foreach ( $children[1] as $i => $child )
+					if ( ! in_array($child, $all_ids) )
+						unset($children[1][$i]);
+				preg_match('/^\s*(\w+)\s/', $group, $link_type);
+				if ( isset($id_children[$parent]) ) {
+					foreach ( $children[1] as $child )
+						array_push($id_children[$parent], $child);
 				}
-				else {
-					$noindex[$child] = $parent;
-					$id_link_type[$child] = $link_type[1];
+				else
+					$id_children[$parent] = $children[1];
+				foreach ( $children[1] as $child ) {
+					if ( isset($noindex[$child]) ) {
+						$duplicates[] = $child;
+						$duplicates[] = $parent;
+					}
+					else {
+						$noindex[$child] = $parent;
+						$id_link_type[$child] = $link_type[1];
+					}
 				}
 			}
 		}
@@ -1280,6 +1308,12 @@ h4. Attributes
 Typically you would use this in an article form, or in a form called by an article form.
 
 h2(#history). Version History
+
+h3. 1.0.b.3 (1/27/2010)
+
+* Articles without @live@ or @sticky@ status now excluded
+* Expired articles now excluded or not, according to site preference
+* New preference for showing past, future, or all articles
 
 h3. 1.0.b.2 (9/18/2009)
 
