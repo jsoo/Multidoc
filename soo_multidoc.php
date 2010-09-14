@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-$plugin['version'] = '2.0.b.1';
+$plugin['version'] = '2.0.b.2';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/txp/';
 $plugin['description'] = 'Create structured multi-page documents';
@@ -241,7 +241,7 @@ class soo_multidoc_node extends soo_obj
 	{
 		$queue = is_array($add) ? $add : array($add);
 		foreach ( $queue as $child )
-			if ( $child instanceof soo_multidoc_node )
+			if ( $child instanceof soo_multidoc_node and $child->id != $this->id )
 				$this->children[$child->id] = $child;
 	}
 
@@ -377,7 +377,6 @@ function soo_multidoc_link( $atts, $thing = null )
 	}
 	else
 		$link_id = $collection->get_id_by_link_type($rel);
-	
 	if ( ! empty($link_id) )
 		$url = $soo_multidoc['data'][$link_id]['url'];
 	
@@ -1089,6 +1088,10 @@ h4. Attributes
 Typically you would use this in an article form, or in a form called by an article form.
 
 h2(#history). Version History
+
+h3. 2.0.b.2 (9/14/2010)
+
+* Bugfix: collections consisting solely of "only children" and with three or more articles triggered a recursion error.
 
 h3. 2.0.b.1 (9/1/2010)
 

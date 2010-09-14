@@ -55,6 +55,8 @@ function soo_multidoc_admin( $event, $step, $message = '' )
 				break;
 			case 'admin':
 				break;
+			case 'help':
+				break;
 			case 'new':
 				if ( $new_root = assert_int(gps('new_root')) )
 					soo_multidoc_new($new_root);
@@ -184,6 +186,14 @@ function soo_multidoc_admin_ui( $step, $message )
 					eInput('soo_multidoc_admin') .
 					tag(fInput('submit', 'soo_multidoc_uninstall', 'Uninstall') . soo_multidoc_gTxt('uninstall_info'), 'label')
 			);
+			break;
+		
+		case 'help':
+			$display[] = new soo_html_ul(array(), array(
+				new soo_html_anchor('?event=plugin&amp;step=plugin_help&amp;name=soo_multidoc', 'soo_multidoc help file'),
+				new soo_html_anchor('?event=plugin&amp;step=plugin_help&amp;name=soo_multidoc_admin', 'soo_multidoc_admin help file'),
+				new soo_html_anchor('http://ipsedixit.net/txp/24/multidoc', 'Online Multidoc user guide'),
+				));
 			break;
 		
 		default:
