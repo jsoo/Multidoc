@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-$plugin['version'] = '2.0.b.2';
+$plugin['version'] = '2.0.b.3';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/txp/';
 $plugin['description'] = 'Create structured multi-page documents';
@@ -45,7 +45,6 @@ $soo_multidoc = array(
 	'init'				=>	false,
 	'status'			=>	false,
 	'collection'		=>	'',
-	'noindex'			=>	'',
 	'id_parent'			=>	'',
 	'data'				=>	'',
 );
@@ -80,16 +79,6 @@ function soo_multidoc_prefs( $event, $step )
 function soo_multidoc_defaults( )
 {
 	return array(
-		'custom_field_name'		=>	array(
-			'val'	=>	'Multidoc',
-			'html'	=>	'text_input',
-			'text'	=>	'Custom field name',
-		),
-		'dev_domain'	=>	array(
-			'val'	=>	'',
-			'html'	=>	'text_input',
-			'text'	=>	'Development domain (no http:// or closing slash)',
-		),
 		'list_all'	=>	array(
 			'val'	=>	0,
 			'html'	=>	'yesnoradio',
@@ -112,14 +101,10 @@ soo_multidoc_init_prefs();
 define('SOO_MULTIDOC_PREFIX', 'soo_mdoc');
 global $soo_multidoc_strings;
 $soo_multidoc_strings = array(
-	'start'				=>	'start',
-	'up'				=>	'up',
-	'next'				=>	'next',
-	'prev'				=>	'prev',
-	'recursion_error'	=>	'Recursion warning: initialization aborted',
-	'multiple_listings'	=>	'Multiple listings for at least one article. Start by checking articles ',
-	'invalid_id_1'		=>	'Invalid ID detected: Article ',
-	'invalid_id_2'		=>	' has a Multidoc listing for article ',
+	'start'	=>	'start',
+	'up'	=>	'up',
+	'next'	=>	'next',
+	'prev'	=>	'prev',
 );
 
 register_callback('soo_multidoc_enumerate_strings', 'l10n.enumerate_strings');
@@ -220,6 +205,27 @@ class soo_multidoc_rowset extends soo_nested_set
  		}
  		return ( isset($child_node) and $rows ) ? $child_node : $node;
 	}
+
+	public function are_you_my_ancestor( $me, $you )
+	{
+		return ( $this->$me->lft > $this->$you->lft and $this->$me->rgt < $this->$you->rgt );
+	}
+	
+	public function find_by_link_type( $link_type, $current = null, $dir = 'next' )
+	{
+		$rs = $this->rows;
+		if ( $dir == 'prev' )
+			$rs = array_reverse($rs);
+		$ids = array_keys($rs);
+		$link_type = strtolower($link_type);
+		
+		if ( $current and in_array($current, $ids) )
+			$rs = array_intersect_key($rs, array_slice($ids, array_search($current, $ids)));
+		
+		foreach ( $rs as $k => $r )
+			if ( $r->link_type == $link_type )
+				return $k;
+	}
 }
 
 class soo_multidoc_node extends soo_obj
@@ -261,43 +267,6 @@ class soo_multidoc_node extends soo_obj
 		}
 	}
 		
-	public function are_you_my_ancestor( $me, $you )
-	{
-		$my_parent = $this->get_up($me);
-		if (  $my_parent == $you ) return true;
-		if ( $my_parent )
-			return $this->are_you_my_ancestor($my_parent, $you);
-	}
-	
-	public function get_id_by_link_type( $link_type )
-	{
-		if ( strtolower($link_type) == $this->link_type )
-			return $this->id;
-		
-		if ( is_array($this->children ) )
-			foreach ( $this->children as $child )
-				if ( empty($out) )
-					$out = $child->get_id_by_link_type($link_type);
-		
-		return isset($out) ? $out : false;
-	}
-	
-	public function get_next_by_link_type( $id, $link_type )
-	{
-		$next = $this->get_next($id);
-		if ( $next )
-			return strtolower($this->get_link_type($next)) == $link_type ?
-				$next : $this->get_next_by_link_type($next, $link_type);
-	}
-	
-	public function get_prev_by_link_type( $id, $link_type )
-	{
-		$prev = $this->get_prev($id);
-		if ( $prev )
-			return strtolower($this->get_link_type($prev)) == $link_type ?
-				$prev : $this->get_prev_by_link_type($prev, $link_type);
-	}
-	
 	public function get_sub_node( $id )
 	{
 		if ( $this->id == $id or is_null($id) )
@@ -339,7 +308,8 @@ function soo_multidoc_link( $atts, $thing = null )
 		$reserved_rel[$text] = $$text = strtolower(soo_multidoc_gTxt($text));
 		
 	global $thisarticle;
-	$collection = $soo_multidoc['collection'];
+	$collection = &$soo_multidoc['collection'];
+	$rowset = &$soo_multidoc['rowset'];
 	$thisid = $thisarticle['thisid'];
 	$rel = trim($rel);
 	
@@ -348,24 +318,19 @@ function soo_multidoc_link( $atts, $thing = null )
 	if ( preg_match("/^($next|$prev)\s+(\w+)/i", $rel, $match) )
 	{
 		$rel_dir = strtolower($match[1]);
-		$rel_type = strtolower($match[2]);
-		
-		if ( $rel_dir == 'next' )
-			$link_id = $collection->get_next_by_link_type($thisid, $rel_type);
-		
+		$rel_type = strtolower($match[2]);		
+		$link_id = $rowset->find_by_link_type($rel_type, $rel_dir, $thisid);		
+
 		// if I have an ancestor of the requested link type, that ancestor will
 		// be the prev link of that type, which isn't what the user wants.
 		// So continue back one more step.
-		elseif ( $rel_dir == 'prev' )
+		if ( $rel_dir == 'prev' and $rowset->are_you_my_ancestor($thisid, $link_id) )
 		{
-			$link_id = $collection->get_prev_by_link_type($thisid, $rel_type);
-			if ( $collection->are_you_my_ancestor($thisid, $link_id) ) {
-				$next_link = $collection->get_prev_by_link_type($link_id, $rel_type);
-				if ( $next_link != $link_id and is_numeric($next_link) )
-					$link_id = $next_link;
-				else
-					unset($link_id);
-			}
+			$next_link = $rowset->find_by_link_type($rel_type, $rel_dir, $link_id);
+			if ( $next_link != $link_id and is_numeric($next_link) )
+				$link_id = $next_link;
+			else
+				unset($link_id);
 		}
 	}
 	elseif ( in_array(strtolower($rel), $reserved_rel) )
@@ -376,7 +341,7 @@ function soo_multidoc_link( $atts, $thing = null )
 			$link_id = $collection->{'get_'.strtolower($rel)}($thisid);
 	}
 	else
-		$link_id = $collection->get_id_by_link_type($rel);
+		$link_id = $rowset->find_by_link_type($rel);
 	if ( ! empty($link_id) )
 		$url = $soo_multidoc['data'][$link_id]['url'];
 	
@@ -698,53 +663,47 @@ function soo_if_multidoc( $atts, $thing )
 
 function _soo_multidoc_init()
 {
-// The central controller for the intialization routines: retrieve and parse 
-// Multidoc field data, build document tree ('collection'). Abort at any sign 
-// of trouble. Most Multidoc tags will abort if this function returns false.
+// Initialization controller. Most Multidoc tags will return blank if this 
+// function returns false.
 
-	global $soo_multidoc, $is_article_list, $thisarticle;
+	global $soo_multidoc;
 	
-	// Multidoc tags not allowed in lists...
-	if ( $is_article_list ) return false; 
-
 	// only run init() once per page	
 	if ( $soo_multidoc['init'] ) return true;
+	$soo_multidoc['init'] = true;
 	
-	// article context check ...............................................
+	global $is_article_list, $thisarticle;
+
+	// Multidoc tags not allowed in lists
+	if ( $is_article_list ) return false; 
+
+	// article context check
 	assert_article();
-	if ( empty($thisarticle) )
-		return _soo_multidoc_debug();
+	if ( empty($thisarticle) ) return false;
 	
 	// populate global arrays of Multidoc article IDs
 	_soo_multidoc_ids_init($thisid = $thisarticle['thisid']);	
 
 	// is this a Multidoc article?
-	if ( ! isset($soo_multidoc['id_parent'][$thisid]) )
-		return _soo_multidoc_debug();
+	if ( empty($soo_multidoc['id_parent'][$thisid]) ) return false;
 
-	// All systems go ///////...................................................
-	$soo_multidoc['init'] = true;
-	$soo_multidoc['status'] = true;
-	return true;
+	// All systems go!!!
+	return $soo_multidoc['status'] = true;
 }
 
 function _soo_multidoc_ids_init( $thisid = null, $force = false )
 {
-// find all articles belonging to Multidoc collections
+// populate $soo_multidoc global arrays
 // if $thisid is set, populate global data array for this article's collection
 
 	global $soo_multidoc;
 	
-	if ( is_array($soo_multidoc['noindex']) and ! $force )
+	if ( is_array($soo_multidoc['id_parent']) and ! $force )
 		return true;
-	
-	$noindex = array();
-	$id_parent = array();
-	$id_children = array();
 	
 	$query = new soo_txp_left_join('soo_multidoc', 'textpattern', 'id', 'ID');
 	$query->select(array('id', 'root', 'lft', 'rgt', 'children', 'type as link_type'))
-		->select_join(array('ID', 'Title as title', 'url_title', 'Section'))
+		->select_join(array('ID', 'Title as title', 'url_title', 'Section', 'Posted'))
 		->order_by(array('root', 'lft'));
 		
 	// Draft or hidden articles visible in admin only
@@ -762,7 +721,6 @@ function _soo_multidoc_ids_init( $thisid = null, $force = false )
 			break;
 		case 'future':
 			$query->where_clause('Posted > now()');
-			break;
 	}
 	
 	if ( ! $query->count() )
@@ -771,13 +729,13 @@ function _soo_multidoc_ids_init( $thisid = null, $force = false )
 	$rs = new soo_txp_rowset($query);
 	$ids = $rs->field_vals('id');
 	$rs->rows = array_combine($ids, $rs->rows);
-	
+	$id_parent = array();
+	$id_children = array();
+		
 	foreach ( $rs->rows as $r )
 	{
 		if ( $r->link_type == 'start' )
 			$id_parent[$r->id] = 'Start';
-		else
-			$noindex[] = $r->id;
 		if ( $r->children )
 		{
 			$id_children[$r->id] = do_list($r->children);
@@ -788,14 +746,13 @@ function _soo_multidoc_ids_init( $thisid = null, $force = false )
 			$id_children[$r->id] = array();
 	}
 	
-	$soo_multidoc['noindex'] = $noindex;	// just the ids
 	$soo_multidoc['id_parent'] = $id_parent;	// key = id, value = parent id
 	$soo_multidoc['id_children'] = $id_children;		// key = id, value = array
 	$soo_multidoc['id_root'] = $rs->field_vals('root', 'id');	// key = id, value = root id
 	$soo_multidoc['id_link_type'] = $rs->field_vals('link_type', 'id');	// key = id, value = link_type
 	
 	// if individual article context, populate data array for this collection
-	if ( $thisid )
+	if ( $thisid and array_key_exists($thisid, $id_parent) )
 	{
 		$root = $soo_multidoc['id_root'][$thisid];
 		$soo_multidoc['rowset'] = new soo_multidoc_rowset($rs->subset('root', $root, 'id'));
@@ -805,7 +762,7 @@ function _soo_multidoc_ids_init( $thisid = null, $force = false )
 		foreach ( $soo_multidoc['rowset']->rows as $id => $r )
 			$soo_multidoc['data'][$id] = array_merge($r->data, array(
 				'parent' => $id_parent[$id],
-				'url' => _soo_multidoc_url($r->data),
+				'url' => permlinkurl($r->data),
 				'next' => array_shift($next),
 			));
 		$soo_multidoc['collection'] = $soo_multidoc['rowset']->as_node_object();
@@ -813,54 +770,6 @@ function _soo_multidoc_ids_init( $thisid = null, $force = false )
 	else
 		$soo_multidoc['rowset'] = $rs;
 	return true;
-}
-
-function _soo_multidoc_url( $article_array )
-{
-// basically a copy of permlinkurl(), to reduce the number of db calls
-
-	global $permlink_mode, $prefs;
-
-	if (isset($prefs['custom_url_func']) and is_callable($prefs['custom_url_func']))
-		return call_user_func($prefs['custom_url_func'], $article_array, PERMLINKURL);
-
-	if (empty($article_array)) return;
-
-	extract($article_array);
-
-	$Section = urlencode($Section);
-	$url_title = urlencode($url_title);
-
-	switch($permlink_mode)
-	{
-		case 'section_id_title':
-			if ($prefs['attach_titles_to_permalinks'])
-				$out = hu."$Section/$ID/$url_title";
-			else
-				$out = hu."$Section/$ID/";
-			break;
-		case 'year_month_day_title':
-			list($y,$m,$d) = explode("-",date("Y-m-d",$posted));
-			$out =  hu."$y/$m/$d/$url_title";
-			break;
-		case 'id_title':
-			if ($prefs['attach_titles_to_permalinks'])
-				$out = hu."$ID/$url_title";
-			else
-				$out = hu."$ID/";
-			break;
-		case 'section_title':
-			$out = hu."$Section/$url_title";
-			break;
-		case 'title_only':
-			$out = hu."$url_title";
-			break;
-		case 'messy':
-			$out = hu."index.php?id=$ID";
-			break;
-	}
-	return $out;
-
 }
 
 /// Convert a row object to an html element object.
@@ -874,33 +783,6 @@ function _soo_multidoc_toc_prep ( &$row, $k, $active )
 		$row = new soo_html_anchor(array('href' => $soo_multidoc['data'][$row->id]['url']), $row->title);
 }
 
-function _soo_multidoc_debug( $message = '' )
-{
-// display error message
-
-	global $soo_multidoc;
-	
-	$soo_multidoc['init'] = true;
-	
-	if ( ! $message ) return false;
-	
-	$prefix = 'soo_multidoc: ';
-	$postfix = n;
-	
-	$domain = $_SERVER['HTTP_HOST'];
-	$is_dev_site = $domain == $soo_multidoc['dev_domain'] ? true : false;
-	if ( ! $is_dev_site ) {
-		$prefix = '<!-- ' . $prefix;
-		$postfix = ' -->' . $postfix;
-	}
-	else
-		$postfix = '<br />' . $postfix;
-	
-	echo $prefix . $message . $postfix;
-	
-	return false;
-}
-
 function _soo_multidoc_temp_table ( )
 {
 // MySQL temporary table to filter Multidoc interior pages from article lists
@@ -908,14 +790,13 @@ function _soo_multidoc_temp_table ( )
 	if ( ! $is_article_list or
 		$pretext['q'] or
 		$soo_multidoc['list_all'] or
-		! _soo_multidoc_ids_init() or
-		empty($soo_multidoc['noindex'])
+		! _soo_multidoc_ids_init() 
 	)
 		return;
-	$table = safe_pfx('textpattern');
+	$t1 = safe_pfx('textpattern');
+	$t2 = safe_pfx('soo_multidoc');
 	safe_query(
-		"create temporary table $table select * from $table where ID not in (" 
-		. implode(',', $soo_multidoc['noindex']) . ")");
+		"create temporary table $t1 select * from $t1 where ID not in (select id from $t2 where id != root)");
 }
 
 register_callback('_soo_multidoc_temp_table', 'pretext_end');

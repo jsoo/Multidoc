@@ -1,16 +1,17 @@
 <?php
 $plugin['name'] = 'soo_multidoc_admin';
-$plugin['version'] = '0.1';
+$plugin['version'] = '0.1.1';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/';
 $plugin['description'] = 'Administer Multidoc collections';
-$plugin['type'] = 3; 
+$plugin['type'] = 3; // admin-side only
 
 if (!defined('txpinterface')) @include_once('zem_tpl.php');
 
 # --- BEGIN PLUGIN CODE ---
 
 require_plugin('soo_multidoc');
+include_once(txpath . '/publish/taghandlers.php'); // for permlinkurl()
 
 if ( @txpinterface == 'admin' ) 
 {
