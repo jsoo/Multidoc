@@ -23,12 +23,11 @@ $plugin['author_uri'] = 'http://ipsedixit.net/txp/';
 $plugin['description'] = 'Create structured multi-page documents';
 $plugin['type'] = 1; 
 
-if (!defined('PLUGIN_HAS_PREFS')) define('PLUGIN_HAS_PREFS', 0x0001); 
-if (!defined('PLUGIN_LIFECYCLE_NOTIFY')) define('PLUGIN_LIFECYCLE_NOTIFY', 0x0002); 
+defined('PLUGIN_HAS_PREFS') or define('PLUGIN_HAS_PREFS', 0x0001); 
+defined('PLUGIN_LIFECYCLE_NOTIFY') or define('PLUGIN_LIFECYCLE_NOTIFY', 0x0002); 
 $plugin['flags'] = PLUGIN_HAS_PREFS | PLUGIN_LIFECYCLE_NOTIFY;
 
-if (!defined('txpinterface'))
-	@include_once('zem_tpl.php');
+defined('txpinterface') or @include_once('zem_tpl.php');
 
 # --- BEGIN PLUGIN CODE ---
 
@@ -39,29 +38,24 @@ require_plugin('soo_txp_obj');
  //									Globals								//
 //---------------------------------------------------------------------//
 
-global $soo_multidoc;
-
-$soo_multidoc = array(
-	'init'				=>	false,
-	'status'			=>	false,
-	'collection'		=>	'',
-	'id_parent'			=>	'',
-	'data'				=>	'',
-);
-
-add_privs('plugin_prefs.soo_multidoc','1,2');
-add_privs('plugin_lifecycle.soo_multidoc','1,2');
-register_callback('soo_multidoc_prefs', 'plugin_prefs.soo_multidoc');
-register_callback('soo_multidoc_prefs', 'plugin_lifecycle.soo_multidoc');
-
-function soo_multidoc_init_prefs( )
+if ( @txpinterface == 'admin' ) 
 {
-	global $soo_multidoc;
-	$prefs = function_exists('soo_plugin_pref_vals') ?
-		soo_plugin_pref_vals('soo_multidoc') : soo_multidoc_defaults();
-	foreach ( $prefs as $name => $val )
-		$soo_multidoc[$name] = is_array($val) ? $val['val'] : $val;
+	add_privs('plugin_prefs.soo_multidoc','1,2');
+	add_privs('plugin_lifecycle.soo_multidoc','1,2');
+	register_callback('soo_multidoc_prefs', 'plugin_prefs.soo_multidoc');
+	register_callback('soo_multidoc_prefs', 'plugin_lifecycle.soo_multidoc');
 }
+
+global $soo_multidoc;
+$soo_multidoc = function_exists('soo_plugin_pref_vals') ? 
+	array_merge(soo_multidoc_defaults(true), soo_plugin_pref_vals('soo_multidoc')) 
+	: soo_multidoc_defaults(true);
+$soo_multidoc = array_merge($soo_multidoc, array(
+	'init'		=>	false,
+	'status'	=>	false,
+	'id_parent'	=>	'',
+	'data'		=>	'',
+));
 
 function soo_multidoc_prefs( $event, $step )
 {
@@ -76,9 +70,9 @@ function soo_multidoc_prefs( $event, $step )
 	}
 }
 
-function soo_multidoc_defaults( )
+function soo_multidoc_defaults( $vals_only = false ) 
 {
-	return array(
+	$defaults = array(
 		'list_all'	=>	array(
 			'val'	=>	0,
 			'html'	=>	'yesnoradio',
@@ -90,9 +84,11 @@ function soo_multidoc_defaults( )
 			'text'	=>	'Show articles posted &lsquo;past&rsquo;, &lsquo;future&rsquo;, or &lsquo;any&rsquo;',
 		),
 	);
+	if ( $vals_only )
+		foreach ( $defaults as $name => $arr )
+			$defaults[$name] = $arr['val'];
+	return $defaults;
 }
-
-soo_multidoc_init_prefs();
 
   //---------------------------------------------------------------------//
  //							MLP Pack definitions						//
@@ -154,61 +150,12 @@ function soo_multidoc_gTxt( $what , $args = array() )
  //									Classes								//
 //---------------------------------------------------------------------//
 
-/// class for converting a nested set to a soo_multidoc_node object
 class soo_multidoc_rowset extends soo_nested_set
 {
-	/** Convert rowset to a soo_multidoc_node object.
-	 *  Assumes the Celko nested set pattern:
-	 *  each row has a 'lft' and 'rgt' value designating the structure.
-	 *  Rowset must already be ordered by 'lft'.
-	 *  @param node Internal use only.
-	 *  @param rows Internal use only.
-	 *  @param rgt Internal use only.
-	 *  @param prev Internal use only.
-	 *  @param up Internal use only.
-	 */
-	public function as_node_object( &$node = null, &$rows = null, $rgt = null, &$prev = null, $up = null )
+	public function has_subnode( $a, $b )
+	// Boolean: is $b a subnode of $a?
 	{
-		if ( is_null($rows) )
-		{
-			$rows = $this->rows;
-			$root = array_shift($rows);
-			$rgt = $root->rgt;
-			$node = new soo_multidoc_node($root->id);
-			$node->link_type('start')->title($root->title);
-			if ( $rows )
-				$node->next(current($rows)->id);
-			$up = $prev = $root->id;
-		}
-		while ( $rows and $row = array_shift($rows) )
-		{
-			$child_node = new soo_multidoc_node($row->id);
-			$child_node->title($row->title)
-				->link_type($row->link_type)
-				->prev($prev)
-				->up($up);
-			if ( $rows )
-				$child_node->next(current($rows)->id);
-			
-			if ( $row->rgt <= $rgt )
-			{
-				$prev = $row->id;
-				$node->children($child_node);
-				if ( $row->rgt > $row->lft + 1 )
-					$child_node->children($this->as_node_object($child_node, $rows, $row->rgt, $prev, $row->id));
-			}
-			else
-			{
-				array_unshift($rows, $row);
-				return;
-			}
- 		}
- 		return ( isset($child_node) and $rows ) ? $child_node : $node;
-	}
-
-	public function are_you_my_ancestor( $me, $you )
-	{
-		return ( $this->$me->lft > $this->$you->lft and $this->$me->rgt < $this->$you->rgt );
+		return ( $this->$b->lft > $this->$a->lft and $this->$b->rgt < $this->$a->rgt );
 	}
 	
 	public function find_by_link_type( $link_type, $current = null, $dir = 'next' )
@@ -227,61 +174,6 @@ class soo_multidoc_rowset extends soo_nested_set
 				return $k;
 	}
 }
-
-class soo_multidoc_node extends soo_obj
-{
-	protected $id				= '';
-	protected $link_type		= '';
-	protected $title			= '';
-	protected $next				= '';
-	protected $prev				= '';
-	protected $up				= '';
-	protected $children			= array();	
-
-	public function __construct( $id )
-	{
-		$this->id = is_numeric($id) ? intval($id) : '';
-	}
-	
-	public function children( &$add )
-	{
-		$queue = is_array($add) ? $add : array($add);
-		foreach ( $queue as $child )
-			if ( $child instanceof soo_multidoc_node and $child->id != $this->id )
-				$this->children[$child->id] = $child;
-	}
-
-	/** Method overloading.
-	 *  $this->get_prop($id) returns named prop from child node $id 
-	 *  Else see parent::__construct()
-	 */
-	public function __call( $request, $args )
-	{
-		switch ( substr($request, 0, 4) )
-		{
-			case 'get_':
-				$node = $this->get_sub_node(array_shift($args));
-				return $node->{substr($request, 4)};
-			default:
-				return parent::__call($request, $args);
-		}
-	}
-		
-	public function get_sub_node( $id )
-	{
-		if ( $this->id == $id or is_null($id) )
-			return $this;
-		
-		foreach ( $this->children as $child )
-			if ( empty($out) )
-				$out = $child->get_sub_node($id);
-		
-		return isset($out) ? $out : false;
-	}		
-	
-}
-
-///////////////////// end of class soo_multidoc_node ///////////////////////
 
   //---------------------------------------------------------------------//
  //									Tags								//
@@ -308,7 +200,6 @@ function soo_multidoc_link( $atts, $thing = null )
 		$reserved_rel[$text] = $$text = strtolower(soo_multidoc_gTxt($text));
 		
 	global $thisarticle;
-	$collection = &$soo_multidoc['collection'];
 	$rowset = &$soo_multidoc['rowset'];
 	$thisid = $thisarticle['thisid'];
 	$rel = trim($rel);
@@ -324,7 +215,7 @@ function soo_multidoc_link( $atts, $thing = null )
 		// if I have an ancestor of the requested link type, that ancestor will
 		// be the prev link of that type, which isn't what the user wants.
 		// So continue back one more step.
-		if ( $rel_dir == 'prev' and $rowset->are_you_my_ancestor($thisid, $link_id) )
+		if ( $rel_dir == 'prev' and $rowset->has_subnode($link_id, $thisid) )
 		{
 			$next_link = $rowset->find_by_link_type($rel_type, $rel_dir, $link_id);
 			if ( $next_link != $link_id and is_numeric($next_link) )
@@ -333,22 +224,36 @@ function soo_multidoc_link( $atts, $thing = null )
 				unset($link_id);
 		}
 	}
-	elseif ( in_array(strtolower($rel), $reserved_rel) )
-	{
-		if ( strtolower($rel) == strtolower($start) )
-			$link_id = $collection->id;
-		else
-			$link_id = $collection->{'get_'.strtolower($rel)}($thisid);
+	elseif ( in_array($relcomp = strtolower($rel), $reserved_rel) )
+	{	
+		if ( $relcomp == $start )
+			$link_id = $soo_multidoc['id_root'][$thisid];
+		elseif ( $relcomp == $up )
+		{
+			$link_id = $soo_multidoc['id_parent'][$thisid];
+			if ( ! intval($link_id) )
+				$link_id = 0;
+		}
+		else	// next or prev
+		{
+			$next_array = $soo_multidoc['next_array'];
+			if ( $relcomp == $prev )
+				$next_array = array_reverse($next_array);
+			$i = array_search($thisid, $next_array);
+			$link_id = isset($next_array[$i + 1]) ? $next_array[$i + 1] : 0;
+		}
+			
 	}
 	else
 		$link_id = $rowset->find_by_link_type($rel);
+	
 	if ( ! empty($link_id) )
 		$url = $soo_multidoc['data'][$link_id]['url'];
 	
 	if ( ! isset($url) ) return false;
 	
 	if ( $add_title )
-		$thing .= $collection->get_title($link_id);
+		$thing .= $rowset->$link_id->title;
 	
 	if ( $link_id == $thisid )
 		$tag = new soo_html_span(array('class' => $active_class));
@@ -590,15 +495,13 @@ function soo_multidoc_page_title( $atts )
 	global $soo_multidoc, $sitename, $thisarticle;
 	if ( ! ( _soo_multidoc_init() and $soo_multidoc['status'] ) ) 
 		return page_title($atts);
-	
-	$collection = $soo_multidoc['collection'];
-	$thisid = $thisarticle['thisid'];
 
-	return htmlspecialchars($sitename . $separator . $collection->title . 
-		( $collection->id != $thisid ? 
-			$separator . $collection->get_title($thisid) 
-			: '' 
-		)
+	$thisid = $thisarticle['thisid'];
+	$rs = &$soo_multidoc['rowset']->rows;
+	$root = $soo_multidoc['id_root'][$thisid];
+
+	return htmlspecialchars($sitename . $separator . $rs[$root]->title . 
+		( $root != $thisid ? $separator . $rs[$thisid]->title : '' )
 	);
 }	
 
@@ -615,17 +518,14 @@ function soo_multidoc_breadcrumbs( $atts )
 	if ( ! ( _soo_multidoc_init() and $soo_multidoc['status'] ) ) 
 		return;
 	
-	$collection = $soo_multidoc['collection'];
-	$this_node = $collection->get_sub_node($thisarticle['thisid']);
-	$crumbs[] = $this_node->title;
+	$data = &$soo_multidoc['data'];
+	$this_id = $thisarticle['thisid'];
+	$crumbs[] = $data[$this_id]['title'];
 	
-	while ( $this_node->link_type != 'start' )
+	while ( $this_id = $soo_multidoc['id_parent'][$this_id] and intval($this_id) )
 	{
-		$parent = $this_node->get_up();
-		$this_node = $collection->get_sub_node($parent);
-		$url = $soo_multidoc['data'][$parent]['url'];
-		$tag = new soo_html_anchor(array('href' => $url), 
-			escape_title($this_node->title));
+		$tag = new soo_html_anchor(array('href' => $data[$this_id]['url']), 
+			escape_title($data[$this_id]['title']));
 		array_unshift($crumbs, $tag->tag());
 	}
 	
@@ -647,12 +547,11 @@ function soo_if_multidoc( $atts, $thing )
 	if ( ! ( _soo_multidoc_init() and $soo_multidoc['status'] ) )
 		return parse(EvalElse($thing, false));
 	
-	$collection = $soo_multidoc['collection'];
-	
+	global $thisarticle;
+	$thisid = $thisarticle['thisid'];
 	$start_ids = do_list($start_id);
 	
-	$ok = ( ! $start_id or in_array($collection->id, $start_ids) )
-		? true : false;
+	$ok = ( ! $start_id or in_array($soo_multidoc['id_root'][$thisid], $start_ids) );
 	
 	return parse(EvalElse($thing, $ok));
 }
@@ -713,7 +612,12 @@ function _soo_multidoc_ids_init( $thisid = null, $force = false )
 	if ( ! get_pref('publish_expired_articles') )
 		$query->where_clause('(now() <= Expires or Expires = ' . 
 			NULLDATETIME . ')');
-
+	
+	if ( $thisid )
+		$query->in('root', 
+			new soo_txp_select('soo_multidoc', array('id' => $thisid), 'root')
+		);
+	
 	switch ( $soo_multidoc['posted_time'] )
 	{
 		case 'past':
@@ -726,7 +630,7 @@ function _soo_multidoc_ids_init( $thisid = null, $force = false )
 	if ( ! $query->count() )
 		return false;
 	
-	$rs = new soo_txp_rowset($query);
+	$rs = new soo_multidoc_rowset($query);
 	$ids = $rs->field_vals('id');
 	$rs->rows = array_combine($ids, $rs->rows);
 	$id_parent = array();
@@ -750,12 +654,11 @@ function _soo_multidoc_ids_init( $thisid = null, $force = false )
 	$soo_multidoc['id_children'] = $id_children;		// key = id, value = array
 	$soo_multidoc['id_root'] = $rs->field_vals('root', 'id');	// key = id, value = root id
 	$soo_multidoc['id_link_type'] = $rs->field_vals('link_type', 'id');	// key = id, value = link_type
+	$soo_multidoc['rowset'] = $rs;
 	
 	// if individual article context, populate data array for this collection
 	if ( $thisid and array_key_exists($thisid, $id_parent) )
 	{
-		$root = $soo_multidoc['id_root'][$thisid];
-		$soo_multidoc['rowset'] = new soo_multidoc_rowset($rs->subset('root', $root, 'id'));
 		$next = $soo_multidoc['rowset']->field_vals('id');
 		$soo_multidoc['next_array'] = $next;
 		array_shift($next);
@@ -765,10 +668,7 @@ function _soo_multidoc_ids_init( $thisid = null, $force = false )
 				'url' => permlinkurl($r->data),
 				'next' => array_shift($next),
 			));
-		$soo_multidoc['collection'] = $soo_multidoc['rowset']->as_node_object();
 	}
-	else
-		$soo_multidoc['rowset'] = $rs;
 	return true;
 }
 
@@ -789,7 +689,8 @@ function _soo_multidoc_temp_table ( )
 	global $pretext, $is_article_list, $soo_multidoc;
 	if ( ! $is_article_list or
 		$pretext['q'] or
-		$soo_multidoc['list_all'] or
+		! empty($soo_multidoc['list_all']) or
+		! getRow("show tables like 'soo_multidoc'") or
 		! _soo_multidoc_ids_init() 
 	)
 		return;
@@ -970,6 +871,11 @@ Typically you would use this in an article form, or in a form called by an artic
 
 h2(#history). Version History
 
+h3. 2.0.b.3 (1/3/2011)
+
+* Miscellaneous tag warning fixes
+* Code cleaning to take advantage of the version 2 move to storing Multidoc data in its own table
+
 h3. 2.0.b.2 (9/14/2010)
 
 * Bugfix: collections consisting solely of "only children" and with three or more articles triggered a recursion error.
@@ -1034,6 +940,8 @@ h3. 1.0.a.2 (2/5/2009)
 h3. 1.0.a.1 (2/4/2009)
 
 * Initial release.
+
+p. &nbsp;
 
  </div>
 # --- END PLUGIN HELP ---
