@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-$plugin['version'] = '2.0.b.3';
+$plugin['version'] = '2.0.0';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/txp/';
 $plugin['description'] = 'Create structured multi-page documents';
@@ -162,12 +162,18 @@ class soo_multidoc_rowset extends soo_nested_set
 	{
 		$rs = $this->rows;
 		if ( $dir == 'prev' )
-			$rs = array_reverse($rs);
+			$rs = array_reverse($rs, true);
 		$ids = array_keys($rs);
 		$link_type = strtolower($link_type);
 		
 		if ( $current and in_array($current, $ids) )
-			$rs = array_intersect_key($rs, array_slice($ids, array_search($current, $ids)));
+		{
+			$id_position = array_search($current, $ids);
+			if ( $dir == 'prev' )
+				$id_position++;
+			$searchable_ids = array_flip(array_slice($ids, $id_position));
+			$rs = array_intersect_key($rs, $searchable_ids);
+		}
 		
 		foreach ( $rs as $k => $r )
 			if ( $r->link_type == $link_type )
@@ -210,14 +216,14 @@ function soo_multidoc_link( $atts, $thing = null )
 	{
 		$rel_dir = strtolower($match[1]);
 		$rel_type = strtolower($match[2]);		
-		$link_id = $rowset->find_by_link_type($rel_type, $rel_dir, $thisid);		
+		$link_id = $rowset->find_by_link_type($rel_type, $thisid, $rel_dir);		
 
 		// if I have an ancestor of the requested link type, that ancestor will
 		// be the prev link of that type, which isn't what the user wants.
 		// So continue back one more step.
 		if ( $rel_dir == 'prev' and $rowset->has_subnode($link_id, $thisid) )
 		{
-			$next_link = $rowset->find_by_link_type($rel_type, $rel_dir, $link_id);
+			$next_link = $rowset->find_by_link_type($rel_type, $link_id, $rel_dir);
 			if ( $next_link != $link_id and is_numeric($next_link) )
 				$link_id = $next_link;
 			else
@@ -870,6 +876,10 @@ h4. Attributes
 Typically you would use this in an article form, or in a form called by an article form.
 
 h2(#history). Version History
+
+h3. 2.0.0 (2011-01-07)
+
+* Bugfix for @soo_multidoc_link@ when combining rel types (e.g. rel="prev Section")
 
 h3. 2.0.b.3 (1/3/2011)
 

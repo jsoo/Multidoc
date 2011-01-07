@@ -742,7 +742,7 @@ This is an admin-side plugin for managing "Multidoc":http://ipsedixit.net/txp/24
 
 h2(#panel). The Multidoc admin panel
 
-The *Multidoc* admin panel is located under the "Extensions tab":http://textbook.textpattern.net/wiki/index.php?title=Extensions. It is divided into three areas, accessed by mini-tabs near the top of the page: Collections, Admin, and Help.
+The *Multidoc* admin panel is located under the "Extensions tab":http://textpattern.net/wiki/index.php?title=Extensions. It is divided into three areas, accessed by mini-tabs near the top of the page: Collections, Admin, and Help.
 
 h3(#collections). The Collections mini-tab
 
@@ -760,7 +760,7 @@ This contains links to the help files for the soo_multidoc and soo_multidoc_admi
 
 h2(#detail). Detail view
 
-Click on a Collection name in the "Collections mini-tab":#collections to bring up the Detail view. This shows all articles in the Collection, with indentation showing the document structure. Clicking an article title brings up that article for editing in the "Write panel":http://textbook.textpattern.net/wiki/index.php?title=Write.
+Click on a Collection name in the "Collections mini-tab":#collections to bring up the Detail view. This shows all articles in the Collection, with indentation showing the document structure. Clicking an article title brings up that article for editing in the "Write panel":http://textpattern.net/wiki/index.php?title=Write.
 
 To the right of the title is the article's link type as assigned in *Multidoc*. Clicking on this brings up a form for changing the link type for that article.
 
@@ -784,7 +784,7 @@ h2(#installing). Installing
 
 These instructions are for new *Multidoc* installations. If you are upgrading an existing installation, see "Upgrading":#upgrading, below.
 
-The *Multidoc* system has two required plugins and two optional plugins; make sure to get the latest version of each. "Install and activate":http://textbook.textpattern.net/wiki/index.php?title=Plugins in this order:
+The *Multidoc* system has two required plugins and two optional plugins; make sure to get the latest version of each. "Install and activate":http://textpattern.net/wiki/index.php?title=Plugins in this order:
 
 * soo_txp_obj %(required)required%
 * soo_multidoc %(required)required%
@@ -792,7 +792,7 @@ The *Multidoc* system has two required plugins and two optional plugins; make su
 
 soo_plugin_pref is optional and can be installed at any point.
 
-To begin creating and managing *Multidoc* Collections, go to the *Multidoc* sub-tab under the "Extensions tab":http://textbook.textpattern.net/wiki/index.php?title=Extensions. (Note that you cannot see the Extensions tab on the "Plugins sub-tab":http://textbook.textpattern.net/wiki/index.php?title=Plugins.) Click the "Install" button to add the soo_multidoc table to your site's database.
+To begin creating and managing *Multidoc* Collections, go to the *Multidoc* sub-tab under the "Extensions tab":http://textpattern.net/wiki/index.php?title=Extensions. (Note that you cannot see the Extensions tab on the "Plugins sub-tab":http://textpattern.net/wiki/index.php?title=Plugins.) Click the "Install" button to add the soo_multidoc table to your site's database.
 
 Now you are ready to begin adding Collections.
 
@@ -812,14 +812,14 @@ h2(#upgrading). Upgrading
 
 If your site already uses *Multidoc* and you are adding soo_multidoc_admin, follow these steps in order to convert your existing Collection data to the new system: 
 
-* "Install and activate":http://textbook.textpattern.net/wiki/index.php?title=Plugins the latest version of soo_txp_obj
+* "Install and activate":http://textpattern.net/wiki/index.php?title=Plugins the latest version of soo_txp_obj
 * Install and activate soo_multidoc_admin
-* Go to the *Multidoc* sub-tab under the "Extensions tab":http://textbook.textpattern.net/wiki/index.php?title=Extensions and click "Install"
+* Go to the *Multidoc* sub-tab under the "Extensions tab":http://textpattern.net/wiki/index.php?title=Extensions and click "Install"
 * Install and activate the latest version of soo_multidoc
 
 If all goes correctly, after the third step you will see a message confirming successful conversion of your existing Collections to the new format. Confirm that your Collections work as expected, then you are free to remove the *Multidoc* custom field. 
 
-Note that removing the field name in "Advanced Preferences":http://textbook.textpattern.net/wiki/index.php?title=Advanced_Preferences#Custom_Fields does not remove the data, which could cause unexpected results if you re-use the field for something else. To clear the data run the following query in your database manager, taking great care to get the correct custom field, and backing up your database first:
+Note that removing the field name in "Advanced Preferences":http://textpattern.net/wiki/index.php?title=Advanced_Preferences#Custom_Fields does not remove the data, which could cause unexpected results if you re-use the field for something else. To clear the data run the following query in your database manager, taking great care to get the correct custom field, and backing up your database first:
 
 bc. UPDATE textpattern SET custom_n = ''
 
