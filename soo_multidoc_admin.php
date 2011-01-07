@@ -801,6 +801,10 @@ bc. UPDATE textpattern SET custom_n = ''
 
 h2(#history). Version History
 
+h3. 0.1.1 (2011/01/07)
+
+* Critical soo_multidoc 2.0.b.3 compatibility update
+
 h3. 0.1 (9/2010)
 
 Initial release. Features:
