@@ -128,22 +128,23 @@ function soo_multidoc_admin_ui( $step, $message )
 			if ( $action = gps('action') and in_array($action, array('add', 'change_type')) )
 			{
 				$form_content = array(
-						new soo_html_label(array(), array(
-							hed(soo_multidoc_gTxt('select_link_type'), 5),
-							new soo_html_select(array(
-								'name'		=> 'link_type'
-							), soo_multidoc_link_types()))
-						),
-						br, 
-						new soo_html_label(array(), array(
-							hed(soo_multidoc_gTxt('create_link_type'), 5),
-							new soo_html_input('text', array('name' => 'new_link_type')
-							))
-						),
-						br,
-						br,
-						new soo_html_input('submit', array('value'	=> $action == 'add' ? gTxt('add') : gTxt('update'))
-					));
+					new soo_html_label(array(), array(
+						hed(soo_multidoc_gTxt('select_link_type'), 5),
+						new soo_html_select(array(
+							'name'		=> 'link_type'
+						), soo_multidoc_all_link_types()),
+					)),
+					br, 
+					new soo_html_label(array(), array(
+						hed(soo_multidoc_gTxt('create_link_type'), 5),
+						new soo_html_input('text', array('name' => 'new_link_type')
+						),)
+					),
+					br,
+					br,
+					new soo_html_input('submit', array('value'	=> $action == 'add' ? gTxt('add') : gTxt('update'))
+					),
+				);
 				if ( $action == 'add' )
 					array_unshift($form_content, new soo_html_label(array(), array(
 						hed(soo_multidoc_gTxt('select_to_add') . "&ldquo;$title&rdquo;", 4),
@@ -165,12 +166,22 @@ function soo_multidoc_admin_ui( $step, $message )
 						'id'		=> 'soo_multidoc_add_node',
 					), $form_content
 				);
+				$cancel_form = new soo_html_form(
+					array('action'	=> array(
+							'event'		=> 'soo_multidoc_admin',
+							'step'		=> 'detail',
+							'id'		=> $id,
+					)), new soo_html_input('submit', array('value' => gTxt('Cancel')))
+				);
 			}
 			$display[] = hed(soo_multidoc_gTxt('collection') . ': ' .$start->title, 2);
+			
+			$display[] = new soo_html_ul(array(), $collection);
 			if ( isset($update_form) )
-				$display[] = array(new soo_html_ul(array(), $collection), $update_form);
-			else
-				$display[] = new soo_html_ul(array(), $collection);
+			{
+				$display[] = $update_form;
+				$display[] = $cancel_form;
+			}
 			break;
 		
 		case 'admin':
@@ -275,9 +286,13 @@ function _soo_multidoc_detail( &$node, $k, $extra )
 			$is_only_child = count($me_and_my_sibs) == 1;
 			$is_first_child = $me_and_my_sibs[0] == $id;
 			$is_primary = in_array($id, $start_children);
+			$type_edit = eLink('soo_multidoc_admin', 'edit', 'id', $id, $node->link_type, 'action', 'change_type');
 		}
 		else
+		{
 			$parent = $me_and_my_sibs = $is_only_child = $is_first_child = $is_primary = null;
+			$type_edit = $node->link_type;
+		}
 			
 		foreach ( array(
 			'add'		=> '+',
@@ -303,7 +318,7 @@ function _soo_multidoc_detail( &$node, $k, $extra )
 				$widget->contents(new soo_html_anchor($atts, $glyph));
 			}
 		
-		$node = eLink('article', 'edit', 'ID', $id, $node->title) . $widget->tag() . '<span class="type">[' . eLink('soo_multidoc_admin', 'edit', 'id', $id, $node->link_type, 'action', 'change_type') . ']</span>';
+		$node = eLink('article', 'edit', 'ID', $id, $node->title) . $widget->tag() . '<span class="type">[' . $type_edit . ']</span>';
 		
 //		'<span class="type">[' . $node->link_type . ']</span>';
 		if ( isset($edit_id) and $edit_id == $id )
@@ -494,11 +509,25 @@ function soo_multidoc_link_types()
 	if ( is_null($link_types) )
 	{
 		global $soo_multidoc;
-		$link_types = array_diff(array_unique($soo_multidoc['id_link_type']), array('start'));
-		sort($link_types);
-		$link_types = array_combine($link_types, $link_types);
+		$link_types = $soo_multidoc['id_link_type'];
+		if ( count($link_types) > 1 )
+		{
+			$link_types = array_diff(array_unique($link_types));
+			sort($link_types);
+			$link_types = array_combine($link_types, $link_types);
+		}
 	}
 	return $link_types;
+}
+
+function soo_multidoc_all_link_types()
+{
+	$query = new soo_txp_select('soo_multidoc');
+	$query->select('type')->distinct()->order_by('type');
+	$rowset = new soo_txp_rowset($query);
+	$types = $rowset->field_vals('type', 'type');
+	unset($types['start']);
+	return $types;
 }
 
 function soo_multidoc_new_type()
@@ -631,16 +660,16 @@ function soo_multidoc_admin_css( )
 	if ( gps('event') == 'soo_multidoc_admin' )
 		echo <<<EOF
 <style type="text/css"><!--
-.soo_multidoc_admin ul ul, .soo_multidoc_admin ol ol { margin-left: 3em; }
+.soo_multidoc_admin ul ul, .soo_multidoc_admin ol ol { margin-left: 2em; }
 .soo_multidoc_admin li { margin: 0.5em 0 !important; }
 .soo_multidoc_admin span.type 
 { 
 	font-size: smaller; 
 	color: #aaa;
 	float: right;
-	margin: 0 2em;
+	margin: 0;
 }
-table.soo_multidoc_admin  { margin: 0 0 0 35%; }
+table.soo_multidoc_admin  { margin: 0 0 0 32em; width: 45em; }
 .soo_multidoc_admin .edit_widget { float: right; margin-left: 2em; }
 .soo_multidoc_admin .edit_widget a, .soo_multidoc_admin .edit_widget .disabled
 {
@@ -804,6 +833,7 @@ h2(#history). Version History
 h3. 0.1.1 (2011/01/07)
 
 * Critical soo_multidoc 2.0.b.3 compatibility update
+* UI improvements
 
 h3. 0.1 (9/2010)
 
