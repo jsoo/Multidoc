@@ -193,6 +193,9 @@ function soo_multidoc_link( $atts, $thing = null )
 	extract(lAtts(array(
 		'rel'			=>	'',
 		'add_title'		=>	'',
+		
+		// {rel} and {title} available as tokens
+		'text'			=>	'{rel}',
 		'html_id'		=>	'',
 		'class'			=>	'',
  		'active_class'	=>	'',
@@ -202,8 +205,8 @@ function soo_multidoc_link( $atts, $thing = null )
 	global $soo_multidoc;
 	if ( ! ( _soo_multidoc_init() and $soo_multidoc['status'] ) ) return false;
 	
-	foreach ( array('start', 'up', 'next', 'prev') as $text )
-		$reserved_rel[$text] = $$text = strtolower(soo_multidoc_gTxt($text));
+	foreach ( array('start', 'up', 'next', 'prev') as $type )
+		$reserved_rel[$type] = $$type = strtolower(soo_multidoc_gTxt($type));
 		
 	global $thisarticle;
 	$rowset = &$soo_multidoc['rowset'];
@@ -261,13 +264,16 @@ function soo_multidoc_link( $atts, $thing = null )
 	if ( $add_title )
 		$thing .= $rowset->$link_id->title;
 	
+	if ( ! $thing )
+		$thing = str_replace(array('{rel}', '{title}'), array($rel, $rowset->$link_id->title), $text);
+	
 	if ( $link_id == $thisid )
 		$tag = new soo_html_span(array('class' => $active_class));
 
 	else
 		$tag = new soo_html_anchor(array('href' => $url, 'rel' => $rel));
 	
-	$tag->contents( $thing ? $thing : $rel );
+	$tag->contents(parse($thing));
 		
 	if ( $wraptag and class_exists($tag_class = 'soo_html_' . $wraptag) )
 	{
@@ -562,6 +568,16 @@ function soo_if_multidoc( $atts, $thing )
 	return parse(EvalElse($thing, $ok));
 }
 
+function soo_if_multidoc_linear( $atts, $thing )
+{
+	global $soo_multidoc;
+	
+	if ( ! ( _soo_multidoc_init() and $soo_multidoc['status'] ) )
+		return parse(EvalElse($thing, false));
+	$is_linear = count(array_unique($soo_multidoc['id_parent'])) == 2;
+	return parse(EvalElse($thing, $is_linear));
+}
+
   //---------------------------------------------------------------------//
  //							Support Functions							//
 //---------------------------------------------------------------------//
@@ -620,9 +636,10 @@ function _soo_multidoc_ids_init( $thisid = null, $force = false )
 			NULLDATETIME . ')');
 	
 	if ( $thisid )
-		$query->in('root', 
-			new soo_txp_select('soo_multidoc', array('id' => $thisid), 'root')
-		);
+	{
+		$root_query = new soo_txp_select('soo_multidoc', array('id' => $thisid), 'root');
+		$query->in('root', $root_query);
+	}
 	
 	switch ( $soo_multidoc['posted_time'] )
 	{
@@ -633,8 +650,21 @@ function _soo_multidoc_ids_init( $thisid = null, $force = false )
 			$query->where_clause('Posted > now()');
 	}
 	
-	if ( ! $query->count() )
+	if ( ! $join_count = $query->count() )
 		return false;
+	
+	// TODO: need to deal with missing articles
+// 	if ( $thisid )
+// 	{
+// 		$thisid_root = current($root_query->row());
+// 		$collection_query = new soo_txp_select('soo_multidoc', array('root' => $thisid_root), 'id');
+// 		$collection_count = $collection_query->count();
+// 		if ( $diff = $collection_count - $join_count )
+// 			echo $diff, ' missing record(s)';
+// 		
+// 		$collection_rowset = new soo_txp_rowset( $collection_query->order_by('lft'));
+// 		$collection_records = $collection_rowset->field_vals('id');
+// 	}
 	
 	$rs = new soo_multidoc_rowset($query);
 	$ids = $rs->field_vals('id');
@@ -754,6 +784,7 @@ h2. Contents
 ** "soo_multidoc_page_title":#soo_multidoc_page_title
 ** "soo_multidoc_breadcrumbs":#soo_multidoc_breadcrumbs
 ** "soo_if_multidoc":#soo_if_multidoc
+** "soo_if_multidoc_linear":#soo_if_multidoc_linear
 * "Version history":#history
 
 h2(#tags). Tags
@@ -767,12 +798,13 @@ Generates an HTML anchor element, based on document relationship. Can be used as
 pre. <txp:soo_multidoc_link rel="Prev" />
 <txp:soo_multidoc_link rel="Next">Continue reading ... </txp:soo_multidoc_link> 
 
-When used as a single tag, the @rel@ value is used for the link text.
+When used as a single tag, the @text@ attribute value is used for the link text (see below).
 
 h4. Attributes
 
 * @rel="LinkType"@ The "link type":http://www.w3.org/TR/REC-html40/types.html#type-links describing the linked document's relationship to the current page
 * @add_title="boolean"@ Add the linked document's title to the link text
+* @text="link text@ Link text when in single-tag mode. The tokens @{rel}@ and @{title}@ will be replaced by their respective values for the link. The %(default)default% is @{rel}@.
 * @class="HTML class"@ HTML class attribute value for the anchor tag
 * @active_class="HTML class"@ HTML class attribute value if @rel@ refers to the current page (tag will be a @span@ instead of @a@)
 * @html_id="HTML ID"@ HTML ID attribute value for the anchor tag
@@ -875,7 +907,28 @@ h4. Attributes
 
 Typically you would use this in an article form, or in a form called by an article form.
 
+h3(#soo_if_multidoc_linear). soo_if_multidoc_linear
+
+h4. Usage
+
+Conditional tag. Requires individual article context. Evaluates to true if the current page belongs to a linear *Multidoc* collection, i.e., a collection in which all pages except Start are immediate children of Start.
+
+pre. <txp:soo_if_multidoc_linear>
+    ...show if true...
+<txp:else />
+    ...show if false...
+</txp:soo_if_multidoc_linear>
+
+h4. Attributes
+
+None.
+
 h2(#history). Version History
+
+h3. ???
+
+* New @text@ attribute for @soo_multidoc_link@. 
+* New tag: @soo_if_multidoc_linear@. Is this a linear collection?
 
 h3. 2.0.0 (2011-01-07)
 
