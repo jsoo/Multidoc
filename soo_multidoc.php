@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-$plugin['version'] = '2.0.0';
+$plugin['version'] = '2.0.1';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/txp/';
 $plugin['description'] = 'Create structured multi-page documents';
@@ -555,7 +555,6 @@ function soo_if_multidoc( $atts, $thing )
 	), $atts));
 		
 	global $soo_multidoc;
-	
 	if ( ! ( _soo_multidoc_init() and $soo_multidoc['status'] ) )
 		return parse(EvalElse($thing, false));
 	
@@ -576,6 +575,50 @@ function soo_if_multidoc_linear( $atts, $thing )
 		return parse(EvalElse($thing, false));
 	$is_linear = count(array_unique($soo_multidoc['id_parent'])) == 2;
 	return parse(EvalElse($thing, $is_linear));
+}
+
+function soo_if_multidoc_link( $atts, $thing )
+{
+	extract(lAtts(array(
+		'rel'			=>	'',
+		'id'			=>	'',	
+		'link_type'		=>	'',	
+	), $atts));
+		
+	$rel = strtolower($rel);
+	global $soo_multidoc;
+	
+	if ( ! ( 
+		$rel && in_array($rel, array('up', 'next', 'prev')) &&
+		( $id || $link_type ) && 
+		_soo_multidoc_init() && 
+		$soo_multidoc['status'] 
+	) )
+		return parse(EvalElse($thing, false));
+	
+	global $thisarticle;
+	$this_id = $thisarticle['thisid'];
+	
+	switch ( $rel )
+	{
+		case 'up':
+			$link_id = $soo_multidoc['id_parent'][$this_id];
+			break;
+		case 'next':
+			$link_id = $soo_multidoc['data'][$this_id]['next'];
+			break;
+		case 'prev':
+			$pos = array_search($this_id, $soo_multidoc['next_array']);
+			$link_id = $pos ? $soo_multidoc['next_array'][$pos - 1] : 0;
+	}
+	if ( $id )
+		$match = $link_id == $id;
+	elseif ( is_numeric($link_id) )
+		$match = strcasecmp($link_type, $soo_multidoc['rowset']->$link_id->link_type) === 0;
+	else
+		$match = false;
+	
+	return parse(EvalElse($thing, $match));
 }
 
   //---------------------------------------------------------------------//
@@ -785,6 +828,7 @@ h2. Contents
 ** "soo_multidoc_breadcrumbs":#soo_multidoc_breadcrumbs
 ** "soo_if_multidoc":#soo_if_multidoc
 ** "soo_if_multidoc_linear":#soo_if_multidoc_linear
+** "soo_if_multidoc_link":#soo_if_multidoc_link
 * "Version history":#history
 
 h2(#tags). Tags
@@ -891,7 +935,7 @@ h3(#soo_if_multidoc). soo_if_multidoc
 
 h4. Usage
 
-Conditional tag. Requires individual article context.
+Conditional tag.
 
 pre. <txp:soo_if_multidoc>
     ...show if true...
@@ -911,7 +955,7 @@ h3(#soo_if_multidoc_linear). soo_if_multidoc_linear
 
 h4. Usage
 
-Conditional tag. Requires individual article context. Evaluates to true if the current page belongs to a linear *Multidoc* collection, i.e., a collection in which all pages except Start are immediate children of Start.
+Conditional tag. Evaluates to true if the current page belongs to a linear *Multidoc* collection, i.e., a collection in which all pages except Start are immediate children of Start.
 
 pre. <txp:soo_if_multidoc_linear>
     ...show if true...
@@ -923,12 +967,32 @@ h4. Attributes
 
 None.
 
+h3(#soo_if_multidoc_link). soo_if_multidoc_link
+
+h4. Usage
+
+Conditional tag. Use to compare the current page's *up*, *next*, or *prev* link to a specified ID or link type.
+
+pre. <txp:soo_if_multidoc_link>
+    ...show if true...
+<txp:else />
+    ...show if false...
+</txp:soo_if_multidoc_link>
+
+h4. Attributes
+
+* @rel="up|next|prev"@ The link (relative to the current page) to check
+* @id="integer"@ The Txp article ID to compare against the link
+* @link_type="LinkType"@ The "link type":http://www.w3.org/TR/REC-html40/types.html#type-links to compare against the link
+
 h2(#history). Version History
 
-h3. ???
+h3. 2.0.1 (2011-01-18)
 
 * New @text@ attribute for @soo_multidoc_link@. 
-* New tag: @soo_if_multidoc_linear@. Is this a linear collection?
+* New tags: 
+** @soo_if_multidoc_linear@: Is this a linear (one-dimensional) collection?
+** @soo_if_multidoc_link@: Compare the *up*, *next*, or *prev* link from the current article against link type or article ID
 
 h3. 2.0.0 (2011-01-07)
 
