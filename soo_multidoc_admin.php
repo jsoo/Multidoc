@@ -1,6 +1,6 @@
 <?php
 $plugin['name'] = 'soo_multidoc_admin';
-$plugin['version'] = '0.1.1';
+$plugin['version'] = '0.1.2';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/';
 $plugin['description'] = 'Administer Multidoc collections';
@@ -151,7 +151,8 @@ function soo_multidoc_admin_ui( $step, $message )
 						new soo_html_select(array(
 							'multiple'	=> 'multiple',
 							'name'		=> 'add_nodes[]',
-						), soo_non_multidoc_articles(10)))
+							'size'		=> 10,
+						), soo_non_multidoc_articles(0)))
 					));
 				if ( $action == 'change_type' )
 					array_unshift($form_content, hed(gTxt('update') . " &ldquo;$title&rdquo;", 4));
@@ -829,6 +830,10 @@ bc. UPDATE textpattern SET custom_n = ''
 * If you use a database table prefix, prepend it to "textpattern" in the query.
 
 h2(#history). Version History
+
+h3. 0.1.2 (2011/04/14)
+
+* Multi-select for adding articles to a collection now contains all available articles
 
 h3. 0.1.1 (2011/01/07)
 
